@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WC Air Miles — World Cup Flight Tracker</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ═══════════════════════════════════════════════════
+   WC Air Miles — Complete Styles
+   Designer's influence: dark-first, glassmorphism 2.0,
+   Space Grotesk headings, Inter body, motion as communication
+   ═══════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: rgba(18, 18, 30, 0.75);
+  --bg-glass: rgba(255, 255, 255, 0.04);
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --text-primary: #f0f0f5;
+  --text-secondary: #8888a0;
+  --text-dim: #55556a;
+  --accent: #06b6d4;
+  --accent-glow: rgba(6, 182, 212, 0.15);
+  --accent-gradient: linear-gradient(135deg, #06b6d4, #0ea5e9);
+  --danger: #ef4444;
+  --success: #22c55e;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Continent colors */
+  --europe: #3b82f6;
+  --south-america: #22c55e;
+  --africa: #f97316;
+  --asia: #ef4444;
+  --north-america: #eab308;
+  --oceania: #a855f7;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ═══ LAYOUT ═══ */
+.app-container {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: 56px 1fr 80px;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ═══ HEADER ═══ */
+.header {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-glass);
+  z-index: 1000;
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  -webkit-text-fill-color: var(--text-secondary);
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.current-year-display {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 60px;
+  text-align: center;
+}
+
+.current-host {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ═══ VIEW TOGGLE ═══ */
+.view-toggle {
+  display: flex;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.view-btn {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.view-btn:hover { color: var(--text-primary); }
+
+.view-btn.active {
+  background: var(--accent);
+  color: #000;
+  font-weight: 600;
+}
+
+.filter-btn {
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.filter-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+.filter-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ═══ MAP ═══ */
+.map-container {
+  grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  overflow: hidden;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+/* Fix leaflet tiles for dark theme */
+.leaflet-tile-pane { filter: brightness(0.7) invert(1) hue-rotate(200deg) saturate(0.3); }
+
+.leaflet-control-zoom a {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-glass) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(16px);
+  border-radius: var(--radius) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.leaflet-popup-tip { background: var(--bg-card); }
+.leaflet-popup-close-button { color: var(--text-secondary) !important; }
+
+/* ═══ STATS SIDEBAR ═══ */
+.stats-sidebar {
+  grid-column: 2;
+  grid-row: 2;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-glass);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-glass);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.sidebar-tab {
+  flex: 1;
+  padding: 6px 0;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+}
+
+.sidebar-tab.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.sidebar-panel { display: none; }
+.sidebar-panel.active { display: block; }
+
+.sidebar-panel h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.current-wc-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stat-mini-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  text-align: center;
+}
+
+.stat-mini-card .value {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-mini-card .label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.leaderboard-entry {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+  gap: 8px;
+}
+
+.leaderboard-entry:hover {
+  background: var(--bg-glass);
+}
+
+.leaderboard-entry .rank {
+  width: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.leaderboard-entry .nation {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.leaderboard-entry .km {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.leaderboard-entry .bar-bg {
+  width: 60px;
+  height: 4px;
+  background: var(--bg-glass);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.leaderboard-entry .bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent-gradient);
+  transition: width 0.5s ease;
+}
+
+/* Team detail in sidebar */
+.team-detail-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: none;
+}
+
+.team-detail-card.visible { display: block; }
+
+.team-detail-card .close-btn {
+  float: right;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+}
+
+.team-detail-card .td-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.team-detail-card .td-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.team-detail-card .td-stat .label { color: var(--text-dim); }
+.team-detail-card .td-stat .val { font-weight: 500; }
+
+/* ═══ TIMELINE ═══ */
+.timeline-bar {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 4px;
+  overflow-x: auto;
+  z-index: 1000;
+}
+
+.timeline-bar::-webkit-scrollbar { height: 3px; }
+.timeline-bar::-webkit-scrollbar-track { background: transparent; }
+.timeline-bar::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+
+.timeline-item {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  background: transparent;
+  border: 1px solid transparent;
+  min-width: 56px;
+  position: relative;
+}
+
+.timeline-item:hover {
+  background: var(--bg-glass);
+}
+
+.timeline-item.active {
+  background: var(--accent-glow);
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.timeline-item .year {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.timeline-item .host-short {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.timeline-item.active .year { color: var(--accent); }
+.timeline-item.active .host-short { color: var(--text-secondary); }
+
+.timeline-item .team-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  margin-top: 3px;
+  opacity: 0.3;
+}
+
+.timeline-item.active .team-dot {
+  background: var(--accent);
+  opacity: 1;
+}
+
+/* ═══ LEGEND ═══ */
+.map-legend {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 1000;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.map-legend .legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+.map-legend .legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ═══ TEAM INFO POPUP ═══ */
+.team-info-popup {
+  font-family: var(--font-body);
+  min-width: 200px;
+}
+
+.team-info-popup h4 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.team-info-popup .tip-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 2px 0;
+  color: var(--text-secondary);
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 900px) {
+  .app-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 56px 1fr 0px 80px;
+  }
+  .stats-sidebar {
+    grid-column: 1;
+    grid-row: 4;
+    border-left: none;
+    border-top: 1px solid var(--border-glass);
+    height: 280px;
+    overflow-y: auto;
+  }
+  .current-wc-stats { grid-template-columns: repeat(4, 1fr); }
+  .header-center { gap: 10px; }
+  .current-year-display { font-size: 22px; min-width: 48px; }
+}
+
+/* ═══ LOADING ═══ */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  transition: opacity 0.5s ease;
+}
+
+.loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--border-glass);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Arc tooltip */
+.arc-tooltip {
+  position: absolute;
+  z-index: 9999;
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.arc-tooltip.visible {
+  opacity: 1;
+}
+
+/* Map info overlay */
+.map-info-overlay {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 8px 20px;
+  text-align: center;
+  pointer-events: none;
+  transition: var(--transition);
+}
+
+.map-info-overlay h2 {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.map-info-overlay h2 strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div style="font-family: var(--font-display); font-size: 14px; color: var(--text-secondary);">Loading World Cup flight data…</div>
+</div>
+
+<div class="app-container" style="display:none;" id="app">
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <span class="logo-icon">✈️</span>
+      <div>
+        <div class="logo-text">WC Air Miles</div>
+        <div class="logo-sub">Flight Tracker</div>
+      </div>
+    </div>
+    <div class="header-center">
+      <span class="current-year-display" id="yearDisplay">1930</span>
+      <span class="current-host" id="hostDisplay">Uruguay</span>
+    </div>
+    <div class="header-right">
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="world" id="viewWorld">🌍 World</button>
+        <button class="view-btn" data-view="host" id="viewHost">🏠 Country</button>
+      </div>
+      <button class="filter-btn" id="filterKnockout">🏆 QF+</button>
+    </div>
+  </header>
+
+  <!-- MAP -->
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="map-info-overlay" id="mapInfo">
+      <h2><strong id="mapInfoTitle">1930 Uruguay</strong> — <span id="mapInfoSub">13 teams, 0 km total</span></h2>
+    </div>
+    <div class="map-legend" id="legend">
+      <div class="legend-row"><span class="legend-dot" style="background:var(--europe)"></span> Europe</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--south-america)"></span> South America</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--africa)"></span> Africa</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--asia)"></span> Asia</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--north-america)"></span> North America</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--oceania)"></span> Oceania</div>
+    </div>
+  </div>
+
+  <!-- STATS SIDEBAR -->
+  <aside class="stats-sidebar" id="sidebar">
+    <!-- Tabs -->
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab active" data-panel="current">This WC</button>
+      <button class="sidebar-tab" data-panel="alltime">All-Time</button>
+      <button class="sidebar-tab" data-panel="marathon">Deep Dive</button>
+    </div>
+
+    <!-- Current WC Stats -->
+    <div class="sidebar-panel active" id="panel-current">
+      <h3>Tournament Travel</h3>
+      <div class="current-wc-stats" id="wcMiniStats">
+        <div class="stat-mini-card"><div class="value" id="wcTeams">0</div><div class="label">Teams</div></div>
+        <div class="stat-mini-card"><div class="value" id="wcTotal">0</div><div class="label">Total km</div></div>
+        <div class="stat-mini-card"><div class="value" id="wcAvg">0</div><div class="label">Avg km</div></div>
+        <div class="stat-mini-card"><div class="value" id="wcLongest">—</div><div class="label">Furthest</div></div>
+      </div>
+      <h3>Teams in this World Cup</h3>
+      <div id="teamList"></div>
+    </div>
+
+    <!-- All-Time Stats -->
+    <div class="sidebar-panel" id="panel-alltime">
+      <h3>All-Time Leaderboard</h3>
+      <div id="alltimeList"></div>
+    </div>
+
+    <!-- Deep Dive -->
+    <div class="sidebar-panel" id="panel-marathon">
+      <h3>Marathon Men</h3>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Nations who travelled the most per appearance</p>
+      <div id="marathonList"></div>
+      <hr style="border-color:var(--border-glass);margin:12px 0;">
+      <h3>Efficiency Kings</h3>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Most stage progress per km travelled</p>
+      <div id="efficiencyList"></div>
+    </div>
+
+    <!-- Team detail (shown on arc click) -->
+    <div class="team-detail-card" id="teamDetail">
+      <button class="close-btn" id="closeTeamDetail">✕</button>
+      <div class="td-name" id="tdName">Brazil</div>
+      <div id="tdStats"></div>
+    </div>
+  </aside>
+
+  <!-- TIMELINE -->
+  <div class="timeline-bar" id="timeline"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════
+   WC Air Miles — Main Application
+   ═══════════════════════════════════════════════════ */
+
+const DATA_URL = 'data/airmiles.json';
+
+// ── Continent mapping ──────────────────────────────
+const CONTINENTS = {
+  'Algeria':'africa','Angola':'africa','Cameroon':'africa','Cape Verde':'africa',
+  'DR Congo':'africa','Egypt':'africa','Ghana':'africa','Ivory Coast':'africa',
+  'Morocco':'africa','Nigeria':'africa','Senegal':'africa','South Africa':'africa',
+  'Togo':'africa','Tunisia':'africa','Zaire':'africa',
+  'Australia':'oceania','New Zealand':'oceania',
+  'Canada':'north-america','Costa Rica':'north-america','Cuba':'north-america',
+  'Curaçao':'north-america','El Salvador':'north-america','Haiti':'north-america',
+  'Honduras':'north-america','Jamaica':'north-america','Mexico':'north-america',
+  'Panama':'north-america','Trinidad & Tobago':'north-america','USA':'north-america',
+  'United States':'north-america',
+  'Argentina':'south-america','Bolivia':'south-america','Brazil':'south-america',
+  'Chile':'south-america','Colombia':'south-america','Ecuador':'south-america',
+  'Paraguay':'south-america','Peru':'south-america','Uruguay':'south-america',
+  'Austria':'europe','Belgium':'europe','Bosnia':'europe','Bulgaria':'europe',
+  'Croatia':'europe','Czech Republic':'europe','Czechia':'europe',
+  'Czechoslovakia':'europe','Denmark':'europe','Dutch East Indies':'asia',
+  'East Germany':'europe','England':'europe','France':'europe','Germany':'europe',
+  'Greece':'europe','Hungary':'europe','Iceland':'europe','Ireland':'europe',
+  'Israel':'europe','Italy':'europe','Netherlands':'europe',
+  'Northern Ireland':'europe','Norway':'europe','Poland':'europe','Portugal':'europe',
+  'Romania':'europe','Russia':'europe','Scotland':'europe','Serbia':'europe',
+  'Serbia & Montenegro':'europe','Slovakia':'europe','Slovenia':'europe',
+  'Soviet Union':'europe','Spain':'europe','Sweden':'europe','Switzerland':'europe',
+  'Turkey':'europe','Ukraine':'europe','Wales':'europe','West Germany':'europe',
+  'Yugoslavia':'europe',
+  'China':'asia','Iran':'asia','Iraq':'asia','Japan':'asia','Jordan':'asia',
+  'Kuwait':'asia','North Korea':'asia','Qatar':'asia','Saudi Arabia':'asia',
+  'South Korea':'asia','UAE':'asia','Uzbekistan':'asia',
+};
+
+const CONT_COLORS = {
+  'europe': '#3b82f6','south-america': '#22c55e','africa': '#f97316',
+  'asia': '#ef4444','north-america': '#eab308','oceania': '#a855f7',
+};
+const CONT_NAMES = {
+  'europe':'Europe','south-america':'S. America','africa':'Africa',
+  'asia':'Asia','north-america':'N. America','oceania':'Oceania',
+};
+
+function getContinent(nation) {
+  return CONTINENTS[nation] || 'europe';
+}
+
+// ── State ──────────────────────────────────────────
+let data = null;
+let currentYear = 1930;
+let currentView = 'world'; // 'world' | 'host'
+let filterKnockout = false;
+let selectedTeam = null;
+let map = null;
+let arcLayer = null;
+let markerLayer = null;
+let hostViewLayer = null;
+let timelineItems = [];
+
+// ── Helpers ────────────────────────────────────────
+function fmtKm(n) {
+  if (n == null) return '—';
+  return Math.round(n).toLocaleString();
+}
+
+function stageRank(s) {
+  const ranks = {'Group':0,'Group Stage':0,'R16':1,'Quarter-finals':2,'QF':2,
+    'Semi-finals':3,'SF':3,'3rd Place':3,'4th Place':2,'Runner-up':4,'Runners-up':4,'Winner':5};
+  return ranks[s] ?? 0;
+}
+
+// ── Arc calculation ────────────────────────────────
+function arcPoints(lat1, lng1, lat2, lng2, segments = 50) {
+  const pts = [];
+  const midLat = (lat1 + lat2) / 2;
+  const midLng = (lng1 + lng2) / 2;
+  const dy = lat2 - lat1;
+  const dx = lng2 - lng1;
+  const dist = Math.sqrt(dy*dy + dx*dx);
+  const arcHeight = Math.min(dist * 1.2, 50);
+
+  // Perpendicular direction
+  const len = Math.sqrt(dy*dy + dx*dx) || 1;
+  const perpLat = -dx / len;
+  const perpLng = dy / len;
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const lat = lat1 + dy * t;
+    const lng = lng1 + dx * t;
+    const bulge = Math.sin(t * Math.PI) * arcHeight;
+    pts.push([lat + perpLat * bulge * 0.08, lng + perpLng * bulge * 0.08]);
+  }
+  return pts;
+}
+
+// ── Format route from notes ────────────────────────
+function parseRoute(nation, teams) {
+  // Try to extract a venue chain from notes
+  const team = teams.find(t => t.nation === nation);
+  if (!team || !team.notes) return [];
+  const notes = team.notes;
+  // Look for arrow-separated venues or "→" etc
+  const parts = notes.split(/[→,;]/).map(s => s.trim()).filter(s => s.length > 0 && !s.startsWith('Venue') && !s.startsWith('Route') && !s.startsWith('Group'));
+  const clean = parts.filter(p => p.length > 2 && p !== nation && !p.startsWith('@'));
+  // Return unique cities
+  return [...new Set(clean)];
+}
+
+// ═══════════════════════════════════════════════════
+//  MAP RENDERERS
+// ═══════════════════════════════════════════════════
+
+function renderWorldView(wc) {
+  if (arcLayer) map.removeLayer(arcLayer);
+  if (markerLayer) map.removeLayer(markerLayer);
+  if (hostViewLayer) { map.removeLayer(hostViewLayer); hostViewLayer = null; }
+
+  const features = [];
+  const bounds = [];
+
+  wc.teams.forEach(t => {
+    const cont = getContinent(t.nation);
+    const color = CONT_COLORS[cont];
+
+    if (filterKnockout && stageRank(t.furthestStage) < 2) return;
+
+    const pts = arcPoints(t.capitalLat, t.capitalLng, t.firstHostLat, t.firstHostLng);
+    pts.forEach(p => bounds.push(p));
+
+    const polyline = L.polyline(pts, {
+      color: color,
+      weight: Math.max(1.5, Math.min(4, t.totalKm / 4000)),
+      opacity: 0.6,
+      smoothFactor: 1.5,
+    });
+
+    polyline._teamNation = t.nation;
+    polyline._teamData = t;
+
+    polyline.on('mouseover', function(e) {
+      this.setStyle({ opacity: 1, weight: this.options.weight + 2 });
+      this.bringToFront();
+    });
+    polyline.on('mouseout', function() {
+      if (selectedTeam !== this._teamNation) {
+        this.setStyle({ opacity: 0.6, weight: Math.max(1.5, Math.min(4, this._teamData.totalKm / 4000)) });
+      }
+    });
+    polyline.on('click', function() {
+      selectTeam(this._teamNation, wc);
+    });
+
+    features.push(polyline);
+  });
+
+  arcLayer = L.layerGroup(features).addTo(map);
+
+  // Fit bounds
+  if (bounds.length > 0) {
+    const padding = 20;
+    map.fitBounds(bounds, { padding: [padding, padding], maxZoom: 4 });
+  } else {
+    map.setView([20, 0], 2);
+  }
+}
+
+function renderHostView(wc) {
+  if (arcLayer) map.removeLayer(arcLayer);
+  if (markerLayer) markerLayer.clearLayers();
+  else markerLayer = L.layerGroup().addTo(map);
+  if (hostViewLayer) { map.removeLayer(hostViewLayer); hostViewLayer = null; }
+
+  // Center on host
+  map.setView([wc.hostLat, wc.hostLng], 4);
+
+  // Add host cities as markers
+  const markers = [];
+  wc.hostCities.forEach(city => {
+    const m = L.circleMarker([city.lat, city.lng], {
+      radius: 8,
+      color: '#06b6d4',
+      fillColor: 'rgba(6,182,212,0.3)',
+      fillOpacity: 0.6,
+      weight: 2,
+    }).addTo(markerLayer);
+    m.bindTooltip(city.name, { direction: 'top' });
+    markers.push({ name: city.name, lat: city.lat, lng: city.lng, marker: m });
+  });
+
+  // Draw internal travel lines (parse from notes or use capital → first city)
+  const lines = [];
+  wc.teams.forEach(t => {
+    if (t.internalKm < 1) return;
+    if (filterKnockout && stageRank(t.furthestStage) < 2) return;
+
+    // Find actual host cities used by this team from notes
+    const notes = t.notes || '';
+    const cityMatches = notes.match(/[A-Z][a-zA-Zàáâäæãåèéêëìíîïòóôöõøùúûü\s-]+/g) || [];
+    const uniqueCities = [...new Set(cityMatches.filter(c => {
+      const trimmed = c.trim();
+      return trimmed.length > 2 && wc.hostCities.some(h => h.name.includes(trimmed.slice(0, 8)));
+    }))];
+
+    if (uniqueCities.length >= 2) {
+      // Draw lines between consecutive cities
+      for (let i = 0; i < uniqueCities.length - 1; i++) {
+        const c1 = wc.hostCities.find(h => h.name.includes(uniqueCities[i].trim().slice(0, 8)));
+        const c2 = wc.hostCities.find(h => h.name.includes(uniqueCities[i+1].trim().slice(0, 8)));
+        if (c1 && c2) {
+          lines.push({ from: c1, to: c2, nation: t.nation });
+        }
+      }
+    }
+  });
+
+  // Deduplicate lines
+  const lineKeys = new Set();
+  const uniqueLines = lines.filter(l => {
+    const key = `${l.from.name}-${l.to.name}`;
+    const rev = `${l.to.name}-${l.from.name}`;
+    if (lineKeys.has(key) || lineKeys.has(rev)) return false;
+    lineKeys.add(key);
+    return true;
+  });
+
+  // Draw internal travel as straight lines
+  const hFeatures = uniqueLines.map(l => {
+    const poly = L.polyline([[l.from.lat, l.from.lng], [l.to.lat, l.to.lng]], {
+      color: 'rgba(255,255,255,0.15)',
+      weight: 2,
+      dashArray: '6, 8',
+      opacity: 0.5,
+    });
+    return poly;
+  });
+
+  if (hFeatures.length > 0) {
+    hostViewLayer = L.layerGroup(hFeatures).addTo(map);
+  }
+}
+
+function selectTeam(nation, wc) {
+  selectedTeam = nation;
+  const t = wc.teams.find(t => t.nation === nation);
+  if (!t) return;
+
+  // Update sidebar detail card
+  document.getElementById('teamDetail').classList.add('visible');
+  document.getElementById('tdName').textContent = `${t.nation} — ${wc.year}`;
+  document.getElementById('tdStats').innerHTML = `
+    <div class="td-stat"><span class="label">Route</span><span class="val">${t.capital} → ${t.firstHostCity}</span></div>
+    <div class="td-stat"><span class="label">Flight</span><span class="val">${fmtKm(t.flightKm)} km</span></div>
+    <div class="td-stat"><span class="label">Internal</span><span class="val">${fmtKm(t.internalKm)} km</span></div>
+    <div class="td-stat"><span class="label">Total</span><span class="val">${fmtKm(t.totalKm)} km</span></div>
+    ${t.kmPerGame ? `<div class="td-stat"><span class="label">Per game</span><span class="val">${fmtKm(t.kmPerGame)} km</span></div>` : ''}
+    ${t.gamesPlayed ? `<div class="td-stat"><span class="label">Games</span><span class="val">${t.gamesPlayed}</span></div>` : ''}
+    <div class="td-stat"><span class="label">Reached</span><span class="val">${t.furthestStage || '—'}</span></div>
+    <div class="td-stat"><span class="label">Won</span><span class="val">${t.wonFinal ? '🏆 Yes' : '—'}</span></div>
+  `;
+
+  // Highlight on map
+  if (arcLayer) {
+    arcLayer.eachLayer(l => {
+      if (l._teamNation === nation) {
+        l.setStyle({ opacity: 1, weight: 5, color: '#ffffff' });
+        l.bringToFront();
+      } else {
+        l.setStyle({ opacity: 0.15, weight: l.options.weight || 2 });
+      }
+    });
+  }
+
+  // Highlight in team list
+  document.querySelectorAll('.team-list-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.nation === nation);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  UPDATE UI
+// ═══════════════════════════════════════════════════
+
+function updateForYear(year) {
+  currentYear = year;
+  const wc = data.worldCups.find(c => c.year === year);
+  if (!wc) return;
+
+  // Header
+  document.getElementById('yearDisplay').textContent = year;
+  document.getElementById('hostDisplay').textContent = wc.host;
+  document.getElementById('mapInfoTitle').textContent = `${year} ${wc.host}`;
+
+  // Map info sub
+  const totalKm = wc.teams.reduce((s, t) => s + t.totalKm, 0);
+  document.getElementById('mapInfoSub').textContent = `${wc.teams.length} teams, ${fmtKm(totalKm)} km total`;
+
+  // Mini stats
+  const flights = wc.teams.map(t => t.flightKm).filter(f => f > 0);
+  const longestTeam = wc.teams.reduce((a, b) => (a.totalKm > b.totalKm) ? a : b, wc.teams[0]);
+  document.getElementById('wcTeams').textContent = wc.teams.length;
+  document.getElementById('wcTotal').textContent = fmtKm(totalKm);
+  document.getElementById('wcAvg').textContent = fmtKm(totalKm / wc.teams.length);
+  document.getElementById('wcLongest').textContent = longestTeam ? fmtKm(longestTeam.totalKm) : '—';
+
+  // Team list
+  renderTeamList(wc);
+
+  // Timeline highlight
+  document.querySelectorAll('.timeline-item').forEach(el => {
+    el.classList.toggle('active', parseInt(el.dataset.year) === year);
+  });
+
+  // Map render
+  renderCurrentView(wc);
+  selectedTeam = null;
+  document.getElementById('teamDetail').classList.remove('visible');
+}
+
+function renderTeamList(wc) {
+  const container = document.getElementById('teamList');
+  const sorted = [...wc.teams].sort((a, b) => b.totalKm - a.totalKm);
+  container.innerHTML = sorted.map(t => {
+    const cont = getContinent(t.nation);
+    const color = CONT_COLORS[cont];
+    return `<div class="team-list-item leaderboard-entry" data-nation="${t.nation}"
+                onclick="selectTeam('${t.nation}', data.worldCups.find(c => c.year === ${wc.year}))">
+      <span class="rank"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};"></span></span>
+      <span class="nation">${t.nation}</span>
+      <span class="km">${fmtKm(t.totalKm)} km</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(100, t.totalKm / sorted[0].totalKm * 100)}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderCurrentView(wc) {
+  if (currentView === 'world') renderWorldView(wc);
+  else renderHostView(wc);
+}
+
+// ═══════════════════════════════════════════════════
+//  TIMELINE
+// ═══════════════════════════════════════════════════
+
+function buildTimeline() {
+  const container = document.getElementById('timeline');
+  container.innerHTML = data.worldCups.map(wc => {
+    const active = wc.year === currentYear ? 'active' : '';
+    return `<div class="timeline-item ${active}" data-year="${wc.year}" onclick="updateForYear(${wc.year})">
+      <div class="year">${wc.year}</div>
+      <div class="host-short">${wc.host.split('/')[0].trim().slice(0, 8)}</div>
+      <div class="team-dot"></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+//  SIDEBAR TABS
+// ═══════════════════════════════════════════════════
+
+function initSidebarTabs() {
+  document.querySelectorAll('.sidebar-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById('panel-' + this.dataset.panel).classList.add('active');
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  ALL-TIME & DEEP DIVE
+// ═══════════════════════════════════════════════════
+
+function buildAllTimeStats() {
+  const alltime = document.getElementById('alltimeList');
+  const lb = data.allTimeStats.leaderboard;
+  const maxKm = lb[0].totalKm;
+  alltime.innerHTML = lb.map((t, i) => {
+    return `<div class="leaderboard-entry" onclick="showTeamHistory('${t.nation}')">
+      <span class="rank">${i + 1}</span>
+      <span class="nation">${t.nation}</span>
+      <span class="km">${fmtKm(t.totalKm)} km</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${t.totalKm / maxKm * 100}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // Marathon men (highest avg km)
+  const sortedByAvg = [...lb].sort((a, b) => b.avgKm - a.avgKm).slice(0, 10);
+  const marathon = document.getElementById('marathonList');
+  const maxAvg = sortedByAvg[0].avgKm;
+  marathon.innerHTML = sortedByAvg.map((t, i) => {
+    return `<div class="leaderboard-entry">
+      <span class="rank">${i + 1}</span>
+      <span class="nation">${t.nation} <span style="color:var(--text-dim);font-size:11px;">(${t.appearances} apps)</span></span>
+      <span class="km">${fmtKm(t.avgKm)} km</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${t.avgKm / maxAvg * 100}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // Efficiency kings: highest furthest stage rank divided by avg km (lower is better)
+  const stageVal = {'Group':1,'R16':2,'Quarter-finals':3,'QF':3,
+    'Semi-finals':4,'SF':4,'3rd Place':4,'4th Place':3,'Runner-up':5,'Runners-up':5,'Winner':6};
+  const withEfficiency = lb.filter(t => t.avgKm > 0 && t.bestFinish).map(t => ({
+    ...t,
+    efficiency: (stageVal[t.bestFinish] || 1) / (t.avgKm / 10000),
+  })).sort((a, b) => b.efficiency - a.efficiency).slice(0, 10);
+
+  const eff = document.getElementById('efficiencyList');
+  const maxEff = withEfficiency[0]?.efficiency || 1;
+  eff.innerHTML = withEfficiency.map(t => {
+    return `<div class="leaderboard-entry">
+      <span class="rank">✦</span>
+      <span class="nation">${t.nation} <span style="color:var(--text-dim);font-size:11px;">${t.bestFinish}</span></span>
+      <span class="km">${fmtKm(t.avgKm)} avg</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${t.efficiency / maxEff * 100}%;background:var(--success)"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function showTeamHistory(nation) {
+  // Find all WC appearances for this nation
+  const apps = data.worldCups.map(wc => {
+    const t = wc.teams.find(t => t.nation === nation);
+    return t ? { year: wc.year, ...t } : null;
+  }).filter(Boolean);
+
+  if (apps.length === 0) return;
+
+  // Show in sidebar detail
+  document.getElementById('teamDetail').classList.add('visible');
+  document.getElementById('tdName').textContent = `${nation} — All Appearances`;
+  document.getElementById('tdStats').innerHTML = apps.slice().sort((a,b) => a.year - b.year).map(a => `
+    <div class="td-stat">
+      <span class="label"><b>${a.year}</b> (${a.firstHostCity})</span>
+      <span class="val">${fmtKm(a.totalKm)} km · ${a.furthestStage || '—'}</span>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════
+//  VIEW TOGGLE
+// ═══════════════════════════════════════════════════
+
+function toggleView(view) {
+  currentView = view;
+  document.querySelectorAll('.view-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  const wc = data.worldCups.find(c => c.year === currentYear);
+  if (wc) renderCurrentView(wc);
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+
+async function init() {
+  try {
+    const resp = await fetch(DATA_URL);
+    data = await resp.json();
+  } catch (e) {
+    document.getElementById('loading').innerHTML = '<div style="color:var(--danger)">❌ Failed to load data</div>';
+    return;
+  }
+
+  // Init map
+  map = L.map('map', {
+    center: [20, 0],
+    zoom: 2,
+    zoomControl: true,
+    attributionControl: false,
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 10,
+    minZoom: 2,
+  }).addTo(map);
+
+  // Build UI
+  buildTimeline();
+  initSidebarTabs();
+  buildAllTimeStats();
+  updateForYear(1930);
+
+  // View toggle
+  document.getElementById('viewWorld').addEventListener('click', () => toggleView('world'));
+  document.getElementById('viewHost').addEventListener('click', () => toggleView('host'));
+
+  // Filter toggle
+  document.getElementById('filterKnockout').addEventListener('click', function() {
+    filterKnockout = !filterKnockout;
+    this.classList.toggle('active', filterKnockout);
+    const wc = data.worldCups.find(c => c.year === currentYear);
+    if (wc) renderCurrentView(wc);
+  });
+
+  // Close team detail
+  document.getElementById('closeTeamDetail').addEventListener('click', () => {
+    document.getElementById('teamDetail').classList.remove('visible');
+    selectedTeam = null;
+    if (arcLayer) {
+      arcLayer.eachLayer(l => l.setStyle({ opacity: 0.6, weight: Math.max(1.5, Math.min(4, (l._teamData?.totalKm || 4000) / 4000)) }));
+    }
+  });
+
+  // Show app
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('app').style.display = '';
+
+  // Scroll timeline to current
+  const activeItem = document.querySelector('.timeline-item.active');
+  if (activeItem) {
+    setTimeout(() => activeItem.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }), 300);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
