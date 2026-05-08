@@ -65,7 +65,7 @@ h1, h2, h3, h4 {
 .app-container {
   display: grid;
   grid-template-columns: 1fr 340px;
-  grid-template-rows: 56px 1fr 80px;
+  grid-template-rows: 56px 1fr 90px;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -116,7 +116,24 @@ h1, h2, h3, h4 {
 .header-center {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 12px;
+}
+
+.nav-btn {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 10px;
+  transition: var(--transition);
+  line-height: 1;
+}
+
+.nav-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
 }
 
 .current-year-display {
@@ -126,6 +143,11 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
   min-width: 60px;
   text-align: center;
+  cursor: pointer;
+}
+
+.current-year-display:hover {
+  color: var(--accent);
 }
 
 .current-host {
@@ -405,11 +427,25 @@ h1, h2, h3, h4 {
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-glass);
   display: flex;
-  align-items: center;
-  padding: 0 12px;
+  align-items: stretch;
+  padding: 6px 8px;
   gap: 4px;
   overflow-x: auto;
   z-index: 1000;
+}
+
+.timeline-label {
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  border-right: 1px solid var(--border-glass);
+  margin-right: 4px;
 }
 
 .timeline-bar::-webkit-scrollbar { height: 3px; }
@@ -421,36 +457,38 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 10px;
+  justify-content: center;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition);
   background: transparent;
   border: 1px solid transparent;
-  min-width: 56px;
+  min-width: 58px;
   position: relative;
 }
 
 .timeline-item:hover {
   background: var(--bg-glass);
+  border-color: rgba(255,255,255,0.06);
 }
 
 .timeline-item.active {
   background: var(--accent-glow);
-  border-color: rgba(6, 182, 212, 0.3);
+  border-color: var(--accent);
 }
 
 .timeline-item .year {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .timeline-item .host-short {
   font-size: 9px;
   color: var(--text-dim);
-  margin-top: 2px;
+  line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -459,17 +497,7 @@ h1, h2, h3, h4 {
 .timeline-item.active .host-short { color: var(--text-secondary); }
 
 .timeline-item .team-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--text-dim);
-  margin-top: 3px;
-  opacity: 0.3;
-}
-
-.timeline-item.active .team-dot {
-  background: var(--accent);
-  opacity: 1;
+  display: none;
 }
 
 /* ═══ LEGEND ═══ */
@@ -637,7 +665,9 @@ h1, h2, h3, h4 {
       </div>
     </div>
     <div class="header-center">
+      <button class="nav-btn" id="prevYear" title="Previous World Cup">◀</button>
       <span class="current-year-display" id="yearDisplay">1930</span>
+      <button class="nav-btn" id="nextYear" title="Next World Cup">▶</button>
       <span class="current-host" id="hostDisplay">Uruguay</span>
     </div>
     <div class="header-right">
@@ -713,7 +743,9 @@ h1, h2, h3, h4 {
   </aside>
 
   <!-- TIMELINE -->
-  <div class="timeline-bar" id="timeline"></div>
+  <div class="timeline-bar" id="timeline">
+    <div class="timeline-label">Select World Cup</div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1220,6 +1252,24 @@ async function init() {
     if (wc) renderCurrentView(wc);
   });
 
+  // Prev/Next navigation
+  document.getElementById('prevYear').addEventListener('click', () => navigateWC(-1));
+  document.getElementById('nextYear').addEventListener('click', () => navigateWC(1));
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft') navigateWC(-1);
+    if (e.key === 'ArrowRight') navigateWC(1);
+  });
+
+  // Click year display to toggle year input
+  document.getElementById('yearDisplay').addEventListener('click', function() {
+    const years = data.worldCups.map(c => c.year);
+    const idx = years.indexOf(currentYear);
+    if (idx < years.length - 1) navigateWC(1);
+    else navigateWC(-(years.length - 1));
+  });
+
   // Close team detail
   document.getElementById('closeTeamDetail').addEventListener('click', () => {
     document.getElementById('teamDetail').classList.remove('visible');
@@ -1234,10 +1284,26 @@ async function init() {
   document.getElementById('app').style.display = '';
 
   // Scroll timeline to current
+  setTimeout(scrollToCurrentYear, 500);
+  // Also scroll after a short delay (data + leaflet need to render)
+  setTimeout(scrollToCurrentYear, 1000);
+
+function scrollToCurrentYear() {
   const activeItem = document.querySelector('.timeline-item.active');
   if (activeItem) {
-    setTimeout(() => activeItem.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }), 300);
+    activeItem.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }
+}
+
+function navigateWC(direction) {
+  const years = data.worldCups.map(c => c.year);
+  const idx = years.indexOf(currentYear);
+  const newIdx = Math.max(0, Math.min(years.length - 1, idx + direction));
+  if (newIdx !== idx) {
+    updateForYear(years[newIdx]);
+    setTimeout(scrollToCurrentYear, 200);
+  }
+}
 }
 
 document.addEventListener('DOMContentLoaded', init);
