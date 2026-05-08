@@ -1212,6 +1212,26 @@ function toggleView(view) {
 //  INIT
 // ═══════════════════════════════════════════════════
 
+
+// --- Global helpers ---
+function scrollToCurrentYear(year) {
+  var el = document.querySelector('.timeline-item[data-year="' + year + '"]');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+}
+
+function navigateWC(direction) {
+  if (!data) return;
+  var years = data.worldCups.map(function(c) { return c.year; });
+  var idx = years.indexOf(currentYear);
+  var newIdx = Math.max(0, Math.min(years.length - 1, idx + direction));
+  if (newIdx !== idx) {
+    updateForYear(years[newIdx]);
+    setTimeout(function() { scrollToCurrentYear(years[newIdx]); }, 300);
+  }
+}
+
 async function init() {
   try {
     const resp = await fetch(DATA_URL);
@@ -1282,28 +1302,11 @@ async function init() {
   // Show app
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('app').style.display = '';
+  console.log('WC Air Miles loaded, year:', currentYear);
 
   // Scroll timeline to current
-  setTimeout(scrollToCurrentYear, 500);
-  // Also scroll after a short delay (data + leaflet need to render)
-  setTimeout(scrollToCurrentYear, 1000);
-
-function scrollToCurrentYear() {
-  const activeItem = document.querySelector('.timeline-item.active');
-  if (activeItem) {
-    activeItem.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  }
-}
-
-function navigateWC(direction) {
-  const years = data.worldCups.map(c => c.year);
-  const idx = years.indexOf(currentYear);
-  const newIdx = Math.max(0, Math.min(years.length - 1, idx + direction));
-  if (newIdx !== idx) {
-    updateForYear(years[newIdx]);
-    setTimeout(scrollToCurrentYear, 200);
-  }
-}
+  setTimeout(function() { scrollToCurrentYear(currentYear); }, 500);
+  setTimeout(function() { scrollToCurrentYear(currentYear); }, 1500);
 }
 
 document.addEventListener('DOMContentLoaded', init);
