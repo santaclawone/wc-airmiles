@@ -4,9 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>WC Air Miles — Flight Intelligence</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' https://unpkg.com https://cdn.jsdelivr.net 'unsafe-inline';
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://unpkg.com https://cdn.jsdelivr.net https://raw.githubusercontent.com;
+  connect-src 'self' https://raw.githubusercontent.com https://unpkg.com https://cdn.jsdelivr.net;
+  worker-src 'self' blob:;
+  media-src 'self';
+">
+
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://raw.githubusercontent.com">
+
+<link rel="preload" href="data/airmiles.compressed.json" as="fetch" crossorigin="anonymous">
+
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   --bg: #07090e;
@@ -27,6 +45,7 @@
   --asia: #f87171;
   --north-america: #facc15;
   --oceania: #c084fc;
+  --splash-transition: 0s;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -45,7 +64,131 @@ html, body {
   touch-action: manipulation;
 }
 
-/* ═══ LAYOUT: sticky sidebar on right ═══ */
+/* ═══════════════════ LANDING / SPLASH ═══════════════════ */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.8s ease, transform 0.8s ease;
+  will-change: opacity, transform;
+}
+
+.splash.hidden {
+  opacity: 0;
+  transform: scale(1.05);
+  pointer-events: none;
+}
+
+.splash-content {
+  text-align: center;
+  max-width: 500px;
+  padding: 40px 24px;
+}
+
+.splash-title {
+  font-family: var(--font-mono);
+  font-size: clamp(36px, 8vw, 72px);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.splash-title span {
+  color: var(--accent);
+}
+
+.splash-sub {
+  font-size: clamp(13px, 2vw, 16px);
+  color: var(--text-dim);
+  margin-bottom: 32px;
+  line-height: 1.5;
+  font-weight: 300;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.splash-decoration {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  opacity: 0.4;
+}
+
+.splash-decoration .line {
+  width: 40px;
+  height: 1px;
+  background: var(--accent);
+}
+
+.splash-decoration .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.splash-btn {
+  display: inline-block;
+  background: var(--accent);
+  color: #000;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 40px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.splash-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.3);
+}
+
+.splash-btn:active {
+  transform: scale(0.97);
+}
+
+.splash-loading-text {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 16px;
+  opacity: 0.5;
+  letter-spacing: 0.03em;
+}
+
+.splash-loading-bar {
+  width: 120px;
+  height: 2px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 1px;
+  margin: 8px auto 0;
+  overflow: hidden;
+}
+
+.splash-loading-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 1px;
+  transition: width 0.3s ease;
+}
+
+/* ═══ LAYOUT ═══ */
 .app {
   display: grid;
   grid-template-columns: 1fr 300px;
@@ -53,41 +196,28 @@ html, body {
   width: 100vw;
   height: 100dvh;
   overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.6s ease;
 }
 
-.map-col {
+.app.visible {
+  opacity: 1;
+}
+
+.globe-col {
   grid-column: 1;
   position: relative;
   overflow: hidden;
 }
 
-#map {
+#globe-container {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  background: var(--bg);
 }
 
-.leaflet-control-zoom {
-  display: none;
-}
-
-.leaflet-control-zoom a {
-  background: var(--bg-elevated) !important;
-  color: var(--text-dim) !important;
-  border-color: var(--border) !important;
-}
-
-#arcCanvas {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 500;
-}
-
-/* ═══ SIDEBAR (always visible, takes right column) ═══ */
+/* ═══ SIDEBAR ═══ */
 .sidebar {
   grid-column: 2;
   background: var(--bg-elevated);
@@ -127,6 +257,33 @@ html, body {
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
+}
+
+.search-row {
+  padding: 6px 14px 4px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+}
+
+.search-input::placeholder {
+  color: var(--text-dim);
+  opacity: 0.5;
 }
 
 .tabs-row {
@@ -221,6 +378,7 @@ html, body {
 
 .entry:hover { background: rgba(255,255,255,0.03); }
 .entry.active { background: var(--accent-glow); }
+.entry.dimmed { opacity: 0.3; }
 
 .entry .dot {
   width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
@@ -286,9 +444,7 @@ html, body {
 
 hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
 
-/* ═══ OVERLAYS ON MAP ═══ */
-
-/* Top bar — year nav + filter */
+/* ═══ TOP BAR ═══ */
 .top-bar {
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -414,7 +570,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
 .legend-row { display: flex; align-items: center; gap: 5px; font-size: 8px; color: var(--text-dim); line-height: 1.6; }
 .legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-/* Timeline overlay at bottom of map */
+/* ═══ TIMELINE ═══ */
 .timeline-wrap {
   position: absolute;
   bottom: 0; left: 0; right: 0;
@@ -627,45 +783,34 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
   .view-btn, .filter-btn { font-size: 8px; padding: 3px 5px; }
   .map-info { top: 48px; left: 8px; font-size: 9px; padding: 3px 10px; }
   .legend { display: none; }
+  .timeline-wrap { padding-top: 28px; }
 }
-
-/* ═══ LOADING ═══ */
-.loading {
-  position: fixed; inset: 0;
-  z-index: 9999;
-  background: var(--bg);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px;
-  transition: opacity 0.5s ease;
-}
-.loading.hidden { opacity: 0; pointer-events: none; }
-
-.spinner {
-  width: 22px; height: 22px;
-  border: 1.5px solid rgba(255,255,255,0.06);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.loading-text { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
 </style>
 </head>
 <body>
 
-<div class="loading" id="loading">
-  <div class="spinner"></div>
-  <div class="loading-text">Loading flight data…</div>
+<!-- ═══════════════ SPLASH SCREEN ═══════════════ -->
+<div class="splash" id="splash">
+  <div class="splash-content">
+    <div class="splash-decoration">
+      <div class="line"></div>
+      <div class="dot"></div>
+      <div class="line"></div>
+    </div>
+    <h1 class="splash-title">WC <span>AIR</span> MILES</h1>
+    <p class="splash-sub">Explore how far every team has travelled to every World Cup from 1930 to 2026</p>
+    <button class="splash-btn" id="startBtn">START</button>
+    <div class="splash-loading-text" id="loadingText">Loading flight data…</div>
+    <div class="splash-loading-bar"><div class="splash-loading-fill" id="loadingFill"></div></div>
+  </div>
 </div>
 
-<div class="app" id="app" style="display:none;">
+<!-- ═══════════════ MAIN APP ═══════════════ -->
+<div class="app" id="app">
 
-  <!-- MAP COLUMN -->
-  <div class="map-col">
-    <div id="map"></div>
-    <canvas id="arcCanvas"></canvas>
+  <!-- GLOBE COLUMN -->
+  <div class="globe-col">
+    <div id="globe-container"></div>
 
     <!-- Top Bar -->
     <div class="top-bar">
@@ -678,8 +823,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
         <button class="nav-btn" id="nextYear">▶</button>
       </div>
       <div class="view-filter-group">
-        <button class="view-btn active" data-view="world">🌍</button>
-        <button class="view-btn" data-view="host">📍</button>
+        <button class="view-btn active" data-view="world" id="viewWorld">🌍</button>
+        <button class="view-btn" data-view="host" id="viewHost">📍</button>
         <button class="filter-btn" id="filterKnockout">QF+</button>
       </div>
     </div>
@@ -713,6 +858,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
         <strong id="sYear">1930</strong>
         <span id="sHost" style="display:block;font-size:9px;">Uruguay</span>
       </div>
+    </div>
+    <div class="search-row">
+      <input class="search-input" id="searchInput" type="text" placeholder="Search team…" autocomplete="off">
     </div>
     <div class="tabs-row">
       <button class="tab active" data-panel="current">TEAMS</button>
@@ -777,6 +925,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
     </div>
     <div class="drawer-scroll">
       <div class="drawer-panel active" id="panel-d--current">
+        <div class="mini-stats" style="margin-bottom:6px;">
+          <div class="mini-stat"><div class="val" id="dStatTeams2">—</div><div class="lbl">Teams</div></div>
+          <div class="mini-stat"><div class="val" id="dStatTotal2">—</div><div class="lbl">Ttl km</div></div>
+          <div class="mini-stat"><div class="val" id="dStatAvg2">—</div><div class="lbl">Avg km</div></div>
+          <div class="mini-stat"><div class="val" id="dStatFurthest2">—</div><div class="lbl">Most km</div></div>
+        </div>
         <div id="dTeamList"></div>
       </div>
       <div class="drawer-panel" id="panel-d--alltime">
@@ -796,16 +950,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
 
 </div>
 
-<!-- Leaflet -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- globe.gl from CDN -->
+<script src="https://unpkg.com/globe.gl@2.34.0/dist/globe.gl.min.js" crossorigin="anonymous"></script>
 
 <script>
-/* ═══════════════════════════════════════════════════
-   WC Air Miles v3 — sticky sidebar, full-viewport map,
-   mobile bottom drawer, tapered animated arcs
-   ═══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   WC Air Miles v4 — 3D Globe, Landing Page, Search, Hover,
+   Deep Links, IndexedDB Cache, CSP
+   ═══════════════════════════════════════════════════════════════════ */
 
-const DATA_URL = 'data/airmiles.json';
+const DATA_URL = 'data/airmiles.compressed.json';
+const DATA_URL_FALLBACK = 'data/airmiles.json';
+const IDB_NAME = 'wc-airmiles';
+const IDB_STORE = 'cache';
+const IDB_KEY = 'airmiles-data';
 
 const CONTINENTS = {
   'Algeria':'africa','Angola':'africa','Cameroon':'africa','Cape Verde':'africa',
@@ -864,297 +1022,378 @@ var currentYear = 1930;
 var currentView = 'world';
 var filterQF = false;
 var selectedTeam = null;
-var map = null;
-var canvas = null;
-var ctx = null;
-var animFrame = null;
-var isDrawing = false;
-var arcAnimState = null;
+var hoveredTeam = null;
+var searchQuery = '';
+var globe = null;
+var globeReady = false;
+var autoRotateTimer = null;
+var countryPolygons = [];
+var isHostView = false;
 
 // ═══════════════════════════════════════════════════
-//  CANVAS — TAPERED ARCS WITH DRAW-IN
+//  INDEXEDDB CACHE
 // ═══════════════════════════════════════════════════
 
-function initCanvas() {
-  canvas = document.getElementById('arcCanvas');
-  ctx = canvas.getContext('2d');
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
-}
-
-function resizeCanvas() {
-  if (!canvas || !map) return;
-  var rect = map.getContainer().getBoundingClientRect();
-  var dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  canvas.style.width = rect.width + 'px';
-  canvas.style.height = rect.height + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-function arcPath(start, end) {
-  var dx = end.x - start.x;
-  var dy = end.y - start.y;
-  var dist = Math.sqrt(dx*dx + dy*dy);
-  var bulge = Math.min(dist * 0.45, 180);
-  var px = -dy / (dist || 1);
-  var py = dx / (dist || 1);
-  return {
-    start: start, end: end,
-    cp: { x: (start.x+end.x)/2 + px*bulge, y: (start.y+end.y)/2 + py*bulge }
-  };
-}
-
-function bezierPoint(start, cp, end, t) {
-  var mt = 1 - t;
-  return {
-    x: mt*mt*start.x + 2*mt*t*cp.x + t*t*end.x,
-    y: mt*mt*start.y + 2*mt*t*cp.y + t*t*end.y
-  };
-}
-
-function drawTaperedArc(arc, color, pulse, progress) {
-  if (progress <= 0) return;
-
-  var dx = arc.end.x - arc.start.x;
-  var dy = arc.end.y - arc.start.y;
-  var dist = Math.sqrt(dx*dx + dy*dy);
-  var maxWidth = Math.min(Math.max(dist * 0.018, 2.5), 8);
-  var minWidth = 0.8;
-
-  var steps = Math.max(12, Math.floor(dist * 0.08));
-  var drawTo = Math.floor(steps * progress);
-
-  // Core line — tapered segments
-  ctx.save();
-  for (var i = 0; i < drawTo; i++) {
-    var t0 = i / steps;
-    var t1 = Math.min((i + 1) / steps, progress);
-    var p0 = bezierPoint(arc.start, arc.cp, arc.end, t0);
-    var p1 = bezierPoint(arc.start, arc.cp, arc.end, t1);
-    var w0 = maxWidth - (maxWidth - minWidth) * t0;
-    var w1 = maxWidth - (maxWidth - minWidth) * t1;
-    var avgW = (w0 + w1) / 2;
-    ctx.strokeStyle = color;
-    ctx.globalAlpha = 0.75;
-    ctx.lineWidth = avgW * pulse;
-    ctx.lineCap = 'round';
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.moveTo(p0.x, p0.y);
-    ctx.lineTo(p1.x, p1.y);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  // Glow pass
-  if (progress >= 0.5) {
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.globalAlpha = 0.08 * pulse;
-    ctx.lineWidth = Math.max(maxWidth * 3, 12) * pulse;
-    ctx.lineCap = 'round';
-    ctx.shadowBlur = 20 * pulse;
-    ctx.shadowColor = color;
-    ctx.beginPath();
-    var glowDrawTo = Math.floor(steps * progress);
-    for (var j = 0; j < glowDrawTo; j++) {
-      var gt0 = j / steps;
-      var gt1 = Math.min((j + 1) / steps, progress);
-      var gp0 = bezierPoint(arc.start, arc.cp, arc.end, gt0);
-      var gp1 = bezierPoint(arc.start, arc.cp, arc.end, gt1);
-      ctx.moveTo(gp0.x, gp0.y);
-      ctx.lineTo(gp1.x, gp1.y);
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Origin dot
-  ctx.save();
-  ctx.shadowBlur = 8 * pulse;
-  ctx.shadowColor = color;
-  ctx.fillStyle = color;
-  ctx.globalAlpha = 0.6;
-  ctx.beginPath();
-  ctx.arc(arc.start.x, arc.start.y, Math.min(3 + dist * 0.003, 5.5) * pulse, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // Moving "plane" dot
-  if (progress > 0 && progress < 1) {
-    var hp = bezierPoint(arc.start, arc.cp, arc.end, progress);
-    ctx.save();
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = color;
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath();
-    ctx.arc(hp.x, hp.y, 2 * pulse, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // Arrow-head at destination
-  if (progress >= 1) {
-    var tip = arc.end;
-    var back = bezierPoint(arc.start, arc.cp, arc.end, 0.97);
-    var angle = Math.atan2(tip.y - back.y, tip.x - back.x);
-    var as = Math.min(5 + dist * 0.008, 10);
-    ctx.save();
-    ctx.translate(tip.x, tip.y);
-    ctx.rotate(angle);
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.7;
-    ctx.beginPath();
-    ctx.moveTo(as, 0);
-    ctx.lineTo(-as * 0.5, -as * 0.4);
-    ctx.lineTo(-as * 0.5, as * 0.4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-}
-
-// ═══════════════════════════════════════════════════
-//  DRAW-IN ANIMATION LOOP
-// ═══════════════════════════════════════════════════
-
-function drawArcsAnimated() {
-  if (!ctx || !map || !data) { animFrame = requestAnimationFrame(drawArcsAnimated); return; }
-  var wc = data.worldCups.find(function(c){return c.year===currentYear;});
-  if (!wc) { animFrame = requestAnimationFrame(drawArcsAnimated); return; }
-
-  var dpr = window.devicePixelRatio || 1;
-  var w = canvas.width / dpr;
-  var h = canvas.height / dpr;
-  ctx.clearRect(0, 0, w, h);
-
-  if (!arcAnimState) {
-    var arcs = [];
-    wc.teams.forEach(function(t) {
-      if (filterQF && stageRank(t.furthestStage) < 2) return;
-      var start = map.latLngToContainerPoint([t.capitalLat, t.capitalLng]);
-      var end = map.latLngToContainerPoint([t.firstHostLat, t.firstHostLng]);
-      var a = arcPath(start, end);
-      arcs.push({
-        arc: a,
-        color: contColor(t.nation),
-        nation: t.nation,
-        dist: Math.sqrt(Math.pow(end.x-start.x,2)+Math.pow(end.y-start.y,2))
-      });
-    });
-    arcs.sort(function(a,b){return a.dist-b.dist;});
-    arcAnimState = { arcs: arcs, startTime: performance.now() };
-    isDrawing = true;
-  }
-
-  var elapsed = (performance.now() - arcAnimState.startTime) / 1000;
-  var pulse = 0.7 + 0.3 * Math.sin(elapsed * 1.8);
-  var allDone = true;
-
-  arcAnimState.arcs.forEach(function(a, idx) {
-    var stagger = idx * 0.035;
-    var arcDuration = Math.max(0.3, Math.min(a.dist * 0.004, 0.8));
-    var t = Math.max(0, Math.min(1, (elapsed - stagger) / arcDuration));
-    if (t < 1) allDone = false;
-    drawTaperedArc(a.arc, a.color, pulse, t);
+function openIDB() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = function(e) { resolve(e.target.result); };
+    req.onerror = function(e) { reject(e.target.error); };
   });
-
-  if (allDone) isDrawing = false;
-  animFrame = requestAnimationFrame(drawArcsAnimated);
 }
 
-function startArcAnimation() {
-  if (animFrame) cancelAnimationFrame(animFrame);
-  arcAnimState = null;
-  isDrawing = false;
-  animFrame = requestAnimationFrame(drawArcsAnimated);
+function idbGet(db) {
+  return new Promise(function(resolve, reject) {
+    var tx = db.transaction(IDB_STORE, 'readonly');
+    var store = tx.objectStore(IDB_STORE);
+    var req = store.get(IDB_KEY);
+    req.onsuccess = function() { resolve(req.result); };
+    req.onerror = function() { reject(req.error); };
+  });
 }
 
-function stopArcAnimation() {
-  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
-  arcAnimState = null;
-  isDrawing = false;
+function idbSet(db, val) {
+  return new Promise(function(resolve, reject) {
+    var tx = db.transaction(IDB_STORE, 'readwrite');
+    var store = tx.objectStore(IDB_STORE);
+    var req = store.put(val, IDB_KEY);
+    req.onsuccess = function() { resolve(); };
+    req.onerror = function() { reject(req.error); };
+  });
+}
+
+function loadData() {
+  return openIDB().then(function(db) {
+    return idbGet(db).then(function(cached) {
+      if (cached) {
+        // Return cached data, background-fetch for updates
+        bgFetchUpdate(db);
+        return cached;
+      }
+      return fetchFreshData(db);
+    }).catch(function() {
+      return fetchFreshData(db);
+    });
+  }).catch(function() {
+    // IndexedDB not available, direct fetch
+    return fetch(DATA_URL).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  });
+}
+
+function bgFetchUpdate(db) {
+  fetch(DATA_URL).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(d) {
+    idbSet(db, d).catch(function(){});
+    if (data) {
+      data = d;
+      buildTimeline();
+      buildAllTime();
+      if (globeReady) updateForYear(currentYear);
+    }
+  }).catch(function() {
+    // Background update failed, use cache
+  });
+}
+
+function fetchFreshData(db) {
+  return fetch(DATA_URL).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(d) {
+    idbSet(db, d).catch(function(){});
+    return d;
+  }).catch(function() {
+    return fetch(DATA_URL_FALLBACK).then(function(r) { return r.json(); });
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  GLOBE INITIALIZATION
+// ═══════════════════════════════════════════════════
+
+function initGlobe() {
+  var container = document.getElementById('globe-container');
+  if (!container) return;
+
+  globe = Globe()(container)
+    .globeImageUrl('https://unpkg.com/three-globe@2.31.0/example/img/earth-dark.jpg')
+    .backgroundColor('#07090e')
+    .atmosphereColor('#06b6d4')
+    .atmosphereAltitude(0.15)
+    .enablePointerInteraction(true)
+    .pointerInteractionRadius(8)
+    .onArcHover(onArcHover)
+    .onArcClick(onArcClick);
+
+  // Add subtle country polygons
+  fetch('https://raw.githubusercontent.com/vasturiano/three-globe/master/example/datasets/ne_110m_admin_0_countries.json')
+    .then(function(r) { return r.json(); })
+    .then(function(countries) {
+      countryPolygons = countries.features;
+      globe
+        .polygonsData(countries.features)
+        .polygonAltitude(0.002)
+        .polygonCapColor(function() { return 'rgba(255,255,255,0.01)'; })
+        .polygonSideColor(function() { return 'rgba(255,255,255,0.005)'; })
+        .polygonStrokeColor(function() { return 'rgba(255,255,255,0.04)'; })
+        .polygonLabel(function(d) { return d.properties.NAME || ''; });
+    })
+    .catch(function() {
+      // Country polygons not essential
+    });
+
+  // Set initial view
+  globe.pointOfView({ lat: 20, lng: 10, altitude: 2.5 }, 0);
+
+  // Auto-rotate
+  globe.controls().autoRotate = true;
+  globe.controls().autoRotateSpeed = 0.5;
+  globe.controls().enableDamping = true;
+  globe.controls().dampingFactor = 0.08;
+  globe.controls().minDistance = 1.5;
+  globe.controls().maxDistance = 5;
+
+  globeReady = true;
+
+  // Apply data once loaded
+  if (data) {
+    updateForYear(currentYear);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  ARCS MANAGEMENT
+// ═══════════════════════════════════════════════════
+
+function getArcsData() {
+  if (!data) return [];
+  var wc = data.worldCups.find(function(c) { return c.year === currentYear; });
+  if (!wc) return [];
+
+  var arcs = [];
+  wc.teams.forEach(function(t) {
+    if (filterQF && stageRank(t.furthestStage) < 2) return;
+    if (searchQuery && t.nation.toLowerCase().indexOf(searchQuery.toLowerCase()) === -1) return;
+
+    var isHovered = hoveredTeam && hoveredTeam === t.nation;
+    var isDimmed = hoveredTeam && hoveredTeam !== t.nation;
+    var isSelected = selectedTeam && selectedTeam === t.nation;
+    var glow = 0;
+    if (isHovered) glow = 1;
+    else if (isSelected) glow = 0.5;
+    else if (isDimmed) glow = -0.7; // dim
+
+    arcs.push({
+      startLat: t.capitalLat,
+      startLng: t.capitalLng,
+      endLat: t.firstHostLat,
+      endLng: t.firstHostLng,
+      nation: t.nation,
+      continent: cont(t.nation),
+      color: contColor(t.nation),
+      totalKm: t.totalKm,
+      glow: glow,
+    });
+  });
+  return arcs;
+}
+
+function updateGlobeArcs() {
+  if (!globe || !globeReady) return;
+
+  var arcsData = getArcsData();
+  var totalArcs = arcsData.length;
+
+  globe
+    .arcsData(arcsData)
+    .arcStartLat(function(d) { return d.startLat; })
+    .arcStartLng(function(d) { return d.startLng; })
+    .arcEndLat(function(d) { return d.endLat; })
+    .arcEndLng(function(d) { return d.endLng; })
+    .arcColor(function(d) {
+      var c = d.color;
+      if (d.glow > 0) return c;
+      if (d.glow < 0) return 'rgba(255,255,255,0.05)';
+      return c;
+    })
+    .arcAltitude(0.15)
+    .arcAltitudeAutoScale(0.6)
+    .arcStroke(function(d) {
+      var base = Math.max(0.3, Math.min(d.totalKm / 50000, 2.5));
+      if (d.glow > 0) return base * 2.5;
+      if (d.glow < 0) return base * 0.3;
+      return base;
+    })
+    .arcDashLength(0.35)
+    .arcDashGap(0.007)
+    .arcDashInitialGap(function(d, i) {
+      // Stagger: shorter arcs start closer to visible
+      return 1 - (i / Math.max(totalArcs - 1, 1)) * 0.4;
+    })
+    .arcDashAnimateTime(2000)
+    .arcOpacity(0.85);
+
+  // If in host view, also show host city points
+  if (isHostView && data) {
+    var wc = data.worldCups.find(function(c) { return c.year === currentYear; });
+    if (wc && wc.hostCities) {
+      var points = wc.hostCities.map(function(city) {
+        return { lat: city.lat, lng: city.lng, label: city.name, size: 2 };
+      });
+      // Also add capital points for team arcs
+      arcsData.forEach(function(a) {
+        points.push({ lat: a.startLat, lng: a.startLng, label: a.nation, size: 1 });
+      });
+
+      globe
+        .pointsData(points)
+        .pointLat(function(d) { return d.lat; })
+        .pointLng(function(d) { return d.lng; })
+        .pointColor(function(d) { return d.size > 1 ? '#06b6d4' : 'rgba(255,255,255,0.3)'; })
+        .pointAltitude(0.02)
+        .pointRadius(function(d) { return d.size === 2 ? 0.3 : 0.12; })
+        .pointLabel(function(d) { return d.label || ''; });
+    }
+  } else {
+    // Show only capital dots
+    var capPoints = arcsData.map(function(a) {
+      return { lat: a.startLat, lng: a.startLng, label: a.nation, color: a.color };
+    });
+    globe
+      .pointsData(capPoints)
+      .pointLat(function(d) { return d.lat; })
+      .pointLng(function(d) { return d.lng; })
+      .pointColor(function(d) { return d.color; })
+      .pointAltitude(0.01)
+      .pointRadius(0.15)
+      .pointLabel(function(d) { return d.label || ''; });
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  ARC HOVER & CLICK HANDLERS
+// ═══════════════════════════════════════════════════
+
+function onArcHover(arc) {
+  if (arc) {
+    // Hovering on globe arc - update sidebar hover
+    setHoveredTeam(arc.nation, true);
+  } else {
+    setHoveredTeam(null, true);
+  }
+}
+
+function onArcClick(arc) {
+  if (arc) {
+    selectTeam(arc.nation);
+  }
+}
+
+function setHoveredTeam(nation, fromGlobe) {
+  if (hoveredTeam === nation) return;
+  hoveredTeam = nation;
+
+  // Update sidebar entries
+  if (!fromGlobe) {
+    // Coming from sidebar hover - update arc highlights
+    updateGlobeArcs();
+  } else {
+    updateGlobeArcs();
+  }
+
+  // Update sidebar visual
+  document.querySelectorAll('#teamList .entry').forEach(function(el) {
+    var n = el.dataset.nation;
+    el.classList.toggle('dimmed', hoveredTeam !== null && n !== hoveredTeam);
+  });
+  document.querySelectorAll('#dTeamList .entry').forEach(function(el) {
+    var n = el.dataset.nation;
+    el.classList.toggle('dimmed', hoveredTeam !== null && n !== hoveredTeam);
+  });
 }
 
 // ═══════════════════════════════════════════════════
 //  HOST VIEW
 // ═══════════════════════════════════════════════════
 
-var markerLayer = null;
+function setHostView(wc) {
+  isHostView = true;
+  globe.controls().autoRotate = false;
 
-function renderHostView(wc) {
-  if (markerLayer) map.removeLayer(markerLayer);
-  stopArcAnimation();
-  if (ctx) {
-    var dpr = window.devicePixelRatio || 1;
-    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-  }
-  markerLayer = L.layerGroup().addTo(map);
-  map.setView([wc.hostLat, wc.hostLng], 4);
-  if (wc.hostCities && wc.hostCities.length) {
-    wc.hostCities.forEach(function(city) {
-      L.circleMarker([city.lat, city.lng], {
-        radius: 6,
-        color: '#06b6d4',
-        fillColor: 'rgba(6,182,212,0.15)',
-        fillOpacity: 0.5,
-        weight: 1.5,
-      }).addTo(markerLayer).bindTooltip(city.name, {direction:'top', className:'dark-tooltip'});
-    });
-  }
+  // Show arcs with host city focus
+  updateGlobeArcs();
+
+  // Zoom to host country
+  var zoomLevel = wc.hostCities && wc.hostCities.length > 1 ? 3 : 2.5;
+  globe.pointOfView({
+    lat: wc.hostLat,
+    lng: wc.hostLng,
+    altitude: zoomLevel
+  }, 1000);
+}
+
+function setWorldView() {
+  isHostView = false;
+  globe.controls().autoRotate = true;
+  globe.pointOfView({ lat: 20, lng: 10, altitude: 2.5 }, 1000);
+  updateGlobeArcs();
 }
 
 // ═══════════════════════════════════════════════════
-//  UPDATE
+//  UPDATE FOR YEAR
 // ═══════════════════════════════════════════════════
 
 function updateForYear(year) {
   currentYear = year;
-  var wc = data.worldCups.find(function(c){return c.year===year;});
+  if (!data) return;
+  var wc = data.worldCups.find(function(c) { return c.year === year; });
   if (!wc) return;
 
-  // Header
+  // Update headers
   document.getElementById('yearDisplay').textContent = year;
   document.getElementById('hostDisplay').textContent = wc.host;
   document.getElementById('sYear').textContent = year;
   document.getElementById('sHost').textContent = wc.host;
 
-  var total = wc.teams.reduce(function(s,t){return s+t.totalKm;},0);
-  var longest = wc.teams.reduce(function(a,b){return a.totalKm>b.totalKm?a:b;}, wc.teams[0]);
+  // Compute stats
+  var total = wc.teams.reduce(function(s, t) { return s + t.totalKm; }, 0);
+  var longestTeam = wc.teams.reduce(function(a, b) { return a.totalKm > b.totalKm ? a : b; }, wc.teams[0]);
 
   // Map info badge
-  var infoEl = document.getElementById('mapInfo');
-  if (infoEl) {
-    document.getElementById('infoYear').textContent = year;
-    document.getElementById('infoHost').textContent = wc.host;
-    document.getElementById('infoTeams').textContent = wc.teams.length;
-    document.getElementById('infoKm').textContent = fmt(total);
-    infoEl.classList.add('show');
-  }
-
-  // Legend fade in
-  var legendEl = document.getElementById('legend');
-  if (legendEl) legendEl.classList.add('show');
+  document.getElementById('infoYear').textContent = year;
+  document.getElementById('infoHost').textContent = wc.host;
+  document.getElementById('infoTeams').textContent = wc.teams.length;
+  document.getElementById('infoKm').textContent = fmt(total);
+  document.getElementById('mapInfo').classList.add('show');
+  document.getElementById('legend').classList.add('show');
 
   // Mini stats (sidebar + drawer)
-  ['statTeams','dStatTeams'].forEach(function(id){
+  ['statTeams', 'dStatTeams', 'dStatTeams2'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.textContent = wc.teams.length;
   });
-  ['statTotal','dStatTotal'].forEach(function(id){
+  ['statTotal', 'dStatTotal', 'dStatTotal2'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.textContent = fmt(total);
   });
-  ['statAvg','dStatAvg'].forEach(function(id){
+  ['statAvg', 'dStatAvg', 'dStatAvg2'].forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) el.textContent = wc.teams.length ? fmt(total/wc.teams.length) : '—';
+    if (el) el.textContent = wc.teams.length ? fmt(total / wc.teams.length) : '—';
   });
-  ['statFurthest','dStatFurthest'].forEach(function(id){
+  ['statFurthest', 'dStatFurthest', 'dStatFurthest2'].forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) el.textContent = longest ? fmt(longest.totalKm) : '—';
+    if (el) el.textContent = longestTeam ? fmt(longestTeam.totalKm) : '—';
   });
 
   // Team lists
@@ -1162,103 +1401,126 @@ function updateForYear(year) {
   renderDrawerTeamList(wc);
 
   // Timeline highlight
-  document.querySelectorAll('.timeline-item').forEach(function(el){
-    el.classList.toggle('active', parseInt(el.dataset.year)===year);
+  document.querySelectorAll('.timeline-item').forEach(function(el) {
+    el.classList.toggle('active', parseInt(el.dataset.year) === year);
   });
 
   // Scroll timeline
-  var tel = document.querySelector('.timeline-item[data-year="'+year+'"]');
-  if (tel) tel.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+  var tel = document.querySelector('.timeline-item[data-year="' + year + '"]');
+  if (tel) tel.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 
-  // Map
-  if (currentView === 'world') {
-    if (markerLayer) { map.removeLayer(markerLayer); markerLayer = null; }
-    map.setView([15, 0], 2, {animate: true});
-    startArcAnimation();
-  } else {
-    renderHostView(wc);
-  }
-
+  // Globe
   selectedTeam = null;
-  var dc = document.getElementById('detailCard');
-  if (dc) dc.style.display = 'none';
-  var ddc = document.getElementById('dDetailCard');
-  if (ddc) ddc.style.display = 'none';
+  hoveredTeam = null;
+  if (currentView === 'world') {
+    setWorldView();
+  } else {
+    setHostView(wc);
+  }
 }
 
+// ═══════════════════════════════════════════════════
+//  TEAM LIST RENDERING
+// ═══════════════════════════════════════════════════
+
 function renderTeamList(wc) {
-  var sorted = wc.teams.slice().sort(function(a,b){return b.totalKm-a.totalKm;});
+  var filtered = wc.teams.slice();
+  if (filterQF) filtered = filtered.filter(function(t) { return stageRank(t.furthestStage) >= 2; });
+  if (searchQuery) filtered = filtered.filter(function(t) {
+    return t.nation.toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1;
+  });
+  var sorted = filtered.sort(function(a, b) { return b.totalKm - a.totalKm; });
   var maxKm = sorted.length ? sorted[0].totalKm : 1;
-  var html = sorted.map(function(t){
+  var html = sorted.map(function(t) {
     var c = contColor(t.nation);
     var safeNation = t.nation.replace(/'/g, "\\'");
-    return '<div class="entry" data-nation="'+t.nation+'" onclick="selectTeam(\''+safeNation+'\')">'+
-      '<span class="dot" style="background:'+c+'"></span>'+
-      '<span class="nation">'+t.nation+'</span>'+
-      '<span class="km">'+fmt(t.totalKm)+'</span>'+
-      '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.totalKm/maxKm*100)+'%"></div></div></div>';
+    return '<div class="entry" data-nation="' + t.nation + '" onclick="selectTeam(\'' + safeNation + '\')" onmouseenter="setHoveredTeam(\'' + safeNation + '\',false)" onmouseleave="setHoveredTeam(null,false)">' +
+      '<span class="dot" style="background:' + c + '"></span>' +
+      '<span class="nation">' + t.nation + '</span>' +
+      '<span class="km">' + fmt(t.totalKm) + '</span>' +
+      '<div class="bar-bg"><div class="bar-fill" style="width:' + (t.totalKm / maxKm * 100) + '%"></div></div></div>';
   }).join('');
   var el = document.getElementById('teamList');
   if (el) el.innerHTML = html;
 }
 
 function renderDrawerTeamList(wc) {
-  var sorted = wc.teams.slice().sort(function(a,b){return b.totalKm-a.totalKm;});
+  var filtered = wc.teams.slice();
+  if (filterQF) filtered = filtered.filter(function(t) { return stageRank(t.furthestStage) >= 2; });
+  if (searchQuery) filtered = filtered.filter(function(t) {
+    return t.nation.toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1;
+  });
+  var sorted = filtered.sort(function(a, b) { return b.totalKm - a.totalKm; });
   var maxKm = sorted.length ? sorted[0].totalKm : 1;
-  var html = sorted.map(function(t){
+  var html = sorted.map(function(t) {
     var c = contColor(t.nation);
     var safeNation = t.nation.replace(/'/g, "\\'");
-    return '<div class="entry" data-nation="'+t.nation+'" onclick="dSelectTeam(\''+safeNation+'\')">'+
-      '<span class="dot" style="background:'+c+'"></span>'+
-      '<span class="nation">'+t.nation+'</span>'+
-      '<span class="km">'+fmt(t.totalKm)+'</span>'+
-      '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.totalKm/maxKm*100)+'%"></div></div></div>';
+    return '<div class="entry" data-nation="' + t.nation + '" onclick="dSelectTeam(\'' + safeNation + '\')" onmouseenter="setHoveredTeam(\'' + safeNation + '\',false)" onmouseleave="setHoveredTeam(null,false)">' +
+      '<span class="dot" style="background:' + c + '"></span>' +
+      '<span class="nation">' + t.nation + '</span>' +
+      '<span class="km">' + fmt(t.totalKm) + '</span>' +
+      '<div class="bar-bg"><div class="bar-fill" style="width:' + (t.totalKm / maxKm * 100) + '%"></div></div></div>';
   }).join('');
   var el = document.getElementById('dTeamList');
   if (el) el.innerHTML = html;
 }
 
 function selectTeam(nation) {
-  var wc = data.worldCups.find(function(c){return c.year===currentYear;});
+  if (!data) return;
+  var wc = data.worldCups.find(function(c) { return c.year === currentYear; });
   if (!wc) return;
-  var t = wc.teams.find(function(t2){return t2.nation===nation;});
+  var t = wc.teams.find(function(t2) { return t2.nation === nation; });
   if (!t) return;
+
+  selectedTeam = nation;
+  updateGlobeArcs();
+
   var dc = document.getElementById('detailCard');
   if (dc) {
     dc.style.display = 'block';
-    document.getElementById('detailName').textContent = t.nation+' — '+wc.year;
+    document.getElementById('detailName').textContent = t.nation + ' — ' + wc.year;
     document.getElementById('detailStats').innerHTML = buildDetailHTML(t);
   }
-  document.querySelectorAll('#teamList .entry').forEach(function(el){
-    el.classList.toggle('active', el.dataset.nation===nation);
+  document.querySelectorAll('#teamList .entry').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.nation === nation);
   });
+
+  // Update URL
+  updateURL();
 }
 
 function dSelectTeam(nation) {
-  var wc = data.worldCups.find(function(c){return c.year===currentYear;});
+  if (!data) return;
+  var wc = data.worldCups.find(function(c) { return c.year === currentYear; });
   if (!wc) return;
-  var t = wc.teams.find(function(t2){return t2.nation===nation;});
+  var t = wc.teams.find(function(t2) { return t2.nation === nation; });
   if (!t) return;
+
+  selectedTeam = nation;
+  updateGlobeArcs();
+
   var dc = document.getElementById('dDetailCard');
   if (dc) {
     dc.style.display = 'block';
-    document.getElementById('dDetailName').textContent = t.nation+' — '+wc.year;
+    document.getElementById('dDetailName').textContent = t.nation + ' — ' + wc.year;
     document.getElementById('dDetailStats').innerHTML = buildDetailHTML(t);
   }
-  document.querySelectorAll('#dTeamList .entry').forEach(function(el){
-    el.classList.toggle('active', el.dataset.nation===nation);
+  document.querySelectorAll('#dTeamList .entry').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.nation === nation);
   });
+
+  updateURL();
 }
 
 function buildDetailHTML(t) {
-  return '<div class="stat-row"><span class="lbl">Route</span><span class="val">'+t.capital+' → '+t.firstHostCity+'</span></div>'+
-    '<div class="stat-row"><span class="lbl">Flight</span><span class="val">'+fmt(t.flightKm)+' km</span></div>'+
-    '<div class="stat-row"><span class="lbl">Internal</span><span class="val">'+fmt(t.internalKm)+' km</span></div>'+
-    '<div class="stat-row"><span class="lbl">Total</span><span class="val">'+fmt(t.totalKm)+' km</span></div>'+
-    (t.kmPerGame?'<div class="stat-row"><span class="lbl">Per game</span><span class="val">'+fmt(t.kmPerGame)+' km</span></div>':'')+
-    '<div class="stat-row"><span class="lbl">Games</span><span class="val">'+(t.gamesPlayed||'—')+'</span></div>'+
-    '<div class="stat-row"><span class="lbl">Reached</span><span class="val">'+(t.furthestStage||'—')+'</span></div>'+
-    '<div class="stat-row"><span class="lbl">Won</span><span class="val">'+(t.wonFinal?'🏆':'—')+'</span></div>';
+  return '<div class="stat-row"><span class="lbl">Route</span><span class="val">' + t.capital + ' → ' + t.firstHostCity + '</span></div>' +
+    '<div class="stat-row"><span class="lbl">Flight</span><span class="val">' + fmt(t.flightKm) + ' km</span></div>' +
+    '<div class="stat-row"><span class="lbl">Internal</span><span class="val">' + fmt(t.internalKm) + ' km</span></div>' +
+    '<div class="stat-row"><span class="lbl">Total</span><span class="val">' + fmt(t.totalKm) + ' km</span></div>' +
+    (t.kmPerGame ? '<div class="stat-row"><span class="lbl">Per game</span><span class="val">' + fmt(t.kmPerGame) + ' km</span></div>' : '') +
+    '<div class="stat-row"><span class="lbl">Games</span><span class="val">' + (t.gamesPlayed || '—') + '</span></div>' +
+    '<div class="stat-row"><span class="lbl">Reached</span><span class="val">' + (t.furthestStage || '—') + '</span></div>' +
+    '<div class="stat-row"><span class="lbl">Won</span><span class="val">' + (t.wonFinal ? '🏆' : '—') + '</span></div>';
 }
 
 // ═══════════════════════════════════════════════════
@@ -1267,13 +1529,13 @@ function buildDetailHTML(t) {
 
 function buildTimeline() {
   var el = document.getElementById('timeline');
-  if (!el) return;
-  el.innerHTML = data.worldCups.map(function(wc){
-    var act = wc.year===currentYear?'active':'';
-    var hostShort = wc.host.split('/')[0].slice(0,7);
-    return '<div class="timeline-item '+act+'" data-year="'+wc.year+'" onclick="updateForYear('+wc.year+')">'+
-      '<div class="yr">'+wc.year+'</div>'+
-      '<div class="host">'+hostShort+'</div></div>';
+  if (!el || !data) return;
+  el.innerHTML = data.worldCups.map(function(wc) {
+    var act = wc.year === currentYear ? 'active' : '';
+    var hostShort = wc.host.split('/')[0].slice(0, 7);
+    return '<div class="timeline-item ' + act + '" data-year="' + wc.year + '" onclick="updateForYear(' + wc.year + ')">' +
+      '<div class="yr">' + wc.year + '</div>' +
+      '<div class="host">' + hostShort + '</div></div>';
   }).join('');
 }
 
@@ -1282,16 +1544,17 @@ function buildTimeline() {
 // ═══════════════════════════════════════════════════
 
 function buildAllTime() {
+  if (!data || !data.allTimeStats) return;
   var lb = data.allTimeStats.leaderboard;
   if (!lb) return;
   var maxKm = lb.length ? lb[0].totalKm : 1;
 
-  var html = lb.map(function(t,i){
-    return '<div class="entry" onclick="showTeamHistory(\''+t.nation.replace(/'/g,"\\'")+'\')">'+
-      '<span style="width:16px;font-size:10px;color:var(--text-dim);text-align:center;flex-shrink:0;">'+(i+1)+'</span>'+
-      '<span class="nation">'+t.nation+'</span>'+
-      '<span class="km">'+fmt(t.totalKm)+'</span>'+
-      '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.totalKm/maxKm*100)+'%"></div></div></div>';
+  var html = lb.map(function(t, i) {
+    return '<div class="entry" onclick="showTeamHistory(\'' + t.nation.replace(/'/g, "\\'") + '\')">' +
+      '<span style="width:16px;font-size:10px;color:var(--text-dim);text-align:center;flex-shrink:0;">' + (i + 1) + '</span>' +
+      '<span class="nation">' + t.nation + '</span>' +
+      '<span class="km">' + fmt(t.totalKm) + '</span>' +
+      '<div class="bar-bg"><div class="bar-fill" style="width:' + (t.totalKm / maxKm * 100) + '%"></div></div></div>';
   }).join('');
 
   var ael = document.getElementById('alltimeList');
@@ -1300,13 +1563,13 @@ function buildAllTime() {
   if (dael) dael.innerHTML = html;
 
   // Marathon men
-  var byAvg = lb.slice().sort(function(a,b){return b.avgKm-a.avgKm;}).slice(0,10);
+  var byAvg = lb.slice().sort(function(a, b) { return b.avgKm - a.avgKm; }).slice(0, 10);
   var maxAvg = byAvg.length ? byAvg[0].avgKm : 1;
-  var mhtml = byAvg.map(function(t,i){
-    return '<div class="entry"><span style="width:16px;font-size:10px;color:var(--text-dim);text-align:center;flex-shrink:0;">'+(i+1)+'</span>'+
-      '<span class="nation">'+t.nation+' <span style="color:var(--text-dim);font-size:9px;">('+t.appearances+')</span></span>'+
-      '<span class="km">'+fmt(t.avgKm)+'</span>'+
-      '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.avgKm/maxAvg*100)+'%"></div></div></div>';
+  var mhtml = byAvg.map(function(t, i) {
+    return '<div class="entry"><span style="width:16px;font-size:10px;color:var(--text-dim);text-align:center;flex-shrink:0;">' + (i + 1) + '</span>' +
+      '<span class="nation">' + t.nation + ' <span style="color:var(--text-dim);font-size:9px;">(' + t.appearances + ')</span></span>' +
+      '<span class="km">' + fmt(t.avgKm) + '</span>' +
+      '<div class="bar-bg"><div class="bar-fill" style="width:' + (t.avgKm / maxAvg * 100) + '%"></div></div></div>';
   }).join('');
   var mel = document.getElementById('marathonList');
   if (mel) mel.innerHTML = mhtml;
@@ -1316,16 +1579,16 @@ function buildAllTime() {
   // Efficiency kings
   var stageVal = {'Group':1,'R16':2,'Quarter-finals':3,'QF':3,
     'Semi-finals':4,'SF':4,'3rd Place':4,'4th Place':3,'Runner-up':5,'Runners-up':5,'Winner':6};
-  var eff = lb.filter(function(t){return t.avgKm>0&&t.bestFinish;}).map(function(t){
-    var score = (stageVal[t.bestFinish]||1) / (t.avgKm/10000);
-    return {nation:t.nation, bestFinish:t.bestFinish, avgKm:t.avgKm, score:score};
-  }).sort(function(a,b){return b.score-a.score;}).slice(0,10);
+  var eff = lb.filter(function(t) { return t.avgKm > 0 && t.bestFinish; }).map(function(t) {
+    var score = (stageVal[t.bestFinish] || 1) / (t.avgKm / 10000);
+    return { nation: t.nation, bestFinish: t.bestFinish, avgKm: t.avgKm, score: score };
+  }).sort(function(a, b) { return b.score - a.score; }).slice(0, 10);
   var maxEff = eff.length ? eff[0].score : 1;
-  var ehtml = eff.map(function(t){
-    return '<div class="entry"><span style="width:16px;color:var(--text-dim);text-align:center;flex-shrink:0;">✦</span>'+
-      '<span class="nation">'+t.nation+' <span style="color:var(--text-dim);font-size:9px;">'+t.bestFinish+'</span></span>'+
-      '<span class="km">'+fmt(t.avgKm)+'</span>'+
-      '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.score/maxEff*100)+'%;background:#4ade80"></div></div></div>';
+  var ehtml = eff.map(function(t) {
+    return '<div class="entry"><span style="width:16px;color:var(--text-dim);text-align:center;flex-shrink:0;">✦</span>' +
+      '<span class="nation">' + t.nation + ' <span style="color:var(--text-dim);font-size:9px;">' + t.bestFinish + '</span></span>' +
+      '<span class="km">' + fmt(t.avgKm) + '</span>' +
+      '<div class="bar-bg"><div class="bar-fill" style="width:' + (t.score / maxEff * 100) + '%;background:#4ade80"></div></div></div>';
   }).join('');
   var eel = document.getElementById('efficiencyList');
   if (eel) eel.innerHTML = ehtml;
@@ -1334,19 +1597,20 @@ function buildAllTime() {
 }
 
 function showTeamHistory(nation) {
-  var apps = data.worldCups.map(function(wc){
-    var t = wc.teams.find(function(t2){return t2.nation===nation;});
-    return t ? {year:wc.year, totalKm:t.totalKm, furthestStage:t.furthestStage, firstHostCity:t.firstHostCity} : null;
+  if (!data) return;
+  var apps = data.worldCups.map(function(wc) {
+    var t = wc.teams.find(function(t2) { return t2.nation === nation; });
+    return t ? { year: wc.year, totalKm: t.totalKm, furthestStage: t.furthestStage, firstHostCity: t.firstHostCity } : null;
   }).filter(Boolean);
   if (!apps.length) return;
-  var html = apps.sort(function(a,b){return a.year-b.year;}).map(function(a){
-    return '<div class="stat-row"><span class="lbl"><b>'+a.year+'</b> · '+a.firstHostCity+'</span>'+
-      '<span class="val">'+fmt(a.totalKm)+' km · '+(a.furthestStage||'—')+'</span></div>';
+  var html = apps.sort(function(a, b) { return a.year - b.year; }).map(function(a) {
+    return '<div class="stat-row"><span class="lbl"><b>' + a.year + '</b> · ' + a.firstHostCity + '</span>' +
+      '<span class="val">' + fmt(a.totalKm) + ' km · ' + (a.furthestStage || '—') + '</span></div>';
   }).join('');
   var dc = document.getElementById('detailCard');
   if (dc) {
     dc.style.display = 'block';
-    document.getElementById('detailName').textContent = nation+' — All Appearances';
+    document.getElementById('detailName').textContent = nation + ' — All Appearances';
     document.getElementById('detailStats').innerHTML = html;
   }
 }
@@ -1357,15 +1621,61 @@ function showTeamHistory(nation) {
 
 function navigateWC(dir) {
   if (!data) return;
-  var years = data.worldCups.map(function(c){return c.year;});
+  var years = data.worldCups.map(function(c) { return c.year; });
   var idx = years.indexOf(currentYear);
-  var next = Math.max(0, Math.min(years.length-1, idx+dir));
-  if (next!==idx) updateForYear(years[next]);
+  var next = Math.max(0, Math.min(years.length - 1, idx + dir));
+  if (next !== idx) updateForYear(years[next]);
 }
 
-// ═══════════════════════════════════════════════════════
-//  MOBILE DRAWER — TOUCH GESTURES + PEEK
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  SHAREABLE DEEP LINKS
+// ═══════════════════════════════════════════════════
+
+function updateURL() {
+  var params = new URLSearchParams();
+  params.set('year', currentYear);
+  if (selectedTeam) params.set('team', selectedTeam);
+  var title = 'WC Air Miles — ' + currentYear;
+  if (selectedTeam) title += ' · ' + selectedTeam;
+  history.replaceState(null, title, '?' + params.toString());
+}
+
+function parseDeepLinks() {
+  var params = new URLSearchParams(location.search);
+  var year = parseInt(params.get('year'));
+  var team = params.get('team');
+
+  // Validate year
+  if (data && year) {
+    var valid = data.worldCups.some(function(wc) { return wc.year === year; });
+    if (valid) currentYear = year;
+  }
+  if (team) selectedTeam = team;
+}
+
+// ═══════════════════════════════════════════════════
+//  SEARCH
+// ═══════════════════════════════════════════════════
+
+function initSearch() {
+  var input = document.getElementById('searchInput');
+  if (!input) return;
+
+  input.addEventListener('input', function() {
+    searchQuery = this.value.trim();
+    if (!data) return;
+    var wc = data.worldCups.find(function(c) { return c.year === currentYear; });
+    if (wc) {
+      renderTeamList(wc);
+      renderDrawerTeamList(wc);
+      updateGlobeArcs();
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  MOBILE DRAWER
+// ═══════════════════════════════════════════════════
 
 var drawerState = { isOpen: false, startY: 0, currentY: 0, isDragging: false, autoOpened: false };
 
@@ -1378,10 +1688,10 @@ function initDrawer() {
   var closeBtn = document.getElementById('drawerClose');
   if (!handle || !closeBtn) return;
 
-  // Auto-open after animation settles
-  setTimeout(function(){ openDrawer(); drawerState.autoOpened = true; }, 2500);
+  // Auto-open after 2 seconds
+  setTimeout(function() { openDrawer(); drawerState.autoOpened = true; }, 2000);
 
-  closeBtn.addEventListener('click', function(e){ e.stopPropagation(); closeDrawer(); });
+  closeBtn.addEventListener('click', function(e) { e.stopPropagation(); closeDrawer(); });
 
   handle.addEventListener('touchstart', function(e) {
     drawerState.startY = e.touches[0].clientY;
@@ -1394,27 +1704,26 @@ function initDrawer() {
     if (!drawerState.isDragging) return;
     drawerState.currentY = e.touches[0].clientY;
     var dy = drawerState.currentY - drawerState.startY;
-    var pullHeight = drawer ? drawer.getBoundingClientRect().height : 300;
+    var pullHeight = drawer.getBoundingClientRect().height;
     if (!drawerState.isOpen && dy < 0) {
       var pct = Math.min(Math.abs(dy) / 200, 1);
-      if (drawer) drawer.style.transform = 'translateY(' + ((1 - pct) * (pullHeight - 44)) + 'px)';
+      drawer.style.transform = 'translateY(' + ((1 - pct) * (pullHeight - 44)) + 'px)';
     } else if (drawerState.isOpen && dy > 0) {
       var pct = Math.min(dy / (pullHeight * 0.3), 1);
-      if (drawer) drawer.style.transform = 'translateY(' + (pct * (pullHeight - 44)) + 'px)';
+      drawer.style.transform = 'translateY(' + (pct * (pullHeight - 44)) + 'px)';
     }
   }, { passive: true });
 
   document.addEventListener('touchend', function() {
     if (!drawerState.isDragging) return;
     drawerState.isDragging = false;
-    if (drawer) drawer.classList.remove('no-transition');
+    drawer.classList.remove('no-transition');
     var dy = drawerState.currentY - drawerState.startY;
     if (!drawerState.isOpen && dy < -30) { openDrawer(); }
     else if (drawerState.isOpen && dy > 30) { closeDrawer(); }
-    else if (drawer) drawer.style.transform = '';
+    else drawer.style.transform = '';
   }, { passive: true });
 
-  // Tap handle to toggle
   handle.addEventListener('click', function() {
     if (drawerState.isOpen) closeDrawer(); else openDrawer();
   });
@@ -1443,16 +1752,15 @@ function closeDrawer() {
 // ═══════════════════════════════════════════════════
 
 function initTabs() {
-  document.querySelectorAll('.tab').forEach(function(tab){
-    tab.addEventListener('click', function(){
+  document.querySelectorAll('.tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
       var parent = this.closest('.sidebar, .bottom-drawer');
       if (!parent) return;
-      parent.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+      parent.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
       this.classList.add('active');
-      // Figure out which panels to show
       var panelPrefix = this.dataset.panel;
-      parent.querySelectorAll('.panel, .drawer-panel').forEach(function(p){
-        if (p.id === 'panel-'+panelPrefix) {
+      parent.querySelectorAll('.panel, .drawer-panel').forEach(function(p) {
+        if (p.id === 'panel-' + panelPrefix) {
           p.classList.add('active');
         } else {
           p.classList.remove('active');
@@ -1463,17 +1771,19 @@ function initTabs() {
 }
 
 // ═══════════════════════════════════════════════════
-//  MAP INTERACTION
+//  SPLASH → MAIN APP TRANSITION
 // ═══════════════════════════════════════════════════
 
-function initMapInteraction() {
-  if (!map) return;
-  map.on('moveend', function() {
-    if (currentView === 'world' && !isDrawing) startArcAnimation();
-  });
-  map.on('zoomend', function() {
-    if (currentView === 'world' && !isDrawing) startArcAnimation();
-  });
+function dismissSplash() {
+  var splash = document.getElementById('splash');
+  var app = document.getElementById('app');
+  if (splash) splash.classList.add('hidden');
+  if (app) app.classList.add('visible');
+
+  // Start globe auto-rotation
+  if (globe && globe.controls) {
+    globe.controls().autoRotate = true;
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1481,61 +1791,51 @@ function initMapInteraction() {
 // ═══════════════════════════════════════════════════
 
 function init() {
-  fetch(DATA_URL).then(function(r){return r.json();}).then(function(d){
+  // Preload data
+  loadData().then(function(d) {
     data = d;
 
-    try {
-      map = L.map('map', {
-        center: [15, 0], zoom: 2,
-        zoomControl: false,
-        attributionControl: false,
-        scrollWheelZoom: true,
-        touchZoom: true,
-        doubleClickZoom: true,
-        dragging: true,
-        keyboard: false,
-      });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 8, minZoom: 2,
-      }).addTo(map);
-      map.setMaxBounds([[-85, -180], [85, 180]]);
-    } catch(e) {
-      // Map failed — still show data
-    }
+    // Init globe
+    initGlobe();
 
-    initCanvas();
+    // Parse deep links before first render
+    parseDeepLinks();
+
+    // Build UI
     buildTimeline();
     initTabs();
     buildAllTime();
-    updateForYear(1930);
-    initMapInteraction();
+    updateForYear(currentYear);
+
+    // Init search
+    initSearch();
+
+    // Init drawer
     initDrawer();
 
-    // Event listeners (with null checks)
+    // Init events
     var prevBtn = document.getElementById('prevYear');
-    if (prevBtn) prevBtn.addEventListener('click', function(){navigateWC(-1);});
+    if (prevBtn) prevBtn.addEventListener('click', function() { navigateWC(-1); });
     var nextBtn = document.getElementById('nextYear');
-    if (nextBtn) nextBtn.addEventListener('click', function(){navigateWC(1);});
-    document.addEventListener('keydown', function(e){
+    if (nextBtn) nextBtn.addEventListener('click', function() { navigateWC(1); });
+
+    document.addEventListener('keydown', function(e) {
       if (e.key === 'ArrowLeft') navigateWC(-1);
       if (e.key === 'ArrowRight') navigateWC(1);
     });
 
     // View toggle
-    document.querySelectorAll('.view-btn').forEach(function(b){
-      b.addEventListener('click', function(){
+    document.querySelectorAll('.view-btn').forEach(function(b) {
+      b.addEventListener('click', function() {
         currentView = this.dataset.view;
-        document.querySelectorAll('.view-btn').forEach(function(v){v.classList.remove('active');});
+        document.querySelectorAll('.view-btn').forEach(function(v) { v.classList.remove('active'); });
         this.classList.add('active');
-        var wc = data.worldCups.find(function(c){return c.year===currentYear;});
+        var wc = data.worldCups.find(function(c) { return c.year === currentYear; });
         if (!wc) return;
         if (currentView === 'world') {
-          if (markerLayer) { map.removeLayer(markerLayer); markerLayer = null; }
-          map.setView([15, 0], 2, {animate: true});
-          startArcAnimation();
+          setWorldView();
         } else {
-          stopArcAnimation();
-          renderHostView(wc);
+          setHostView(wc);
         }
       });
     });
@@ -1543,35 +1843,51 @@ function init() {
     // QF+ filter
     var filterBtn = document.getElementById('filterKnockout');
     if (filterBtn) {
-      filterBtn.addEventListener('click', function(){
+      filterBtn.addEventListener('click', function() {
         filterQF = !filterQF;
         this.classList.toggle('active', filterQF);
-        var wc = data.worldCups.find(function(c){return c.year===currentYear;});
+        var wc = data.worldCups.find(function(c) { return c.year === currentYear; });
         if (wc) {
           renderTeamList(wc);
           renderDrawerTeamList(wc);
-          if (currentView === 'world') startArcAnimation();
+          updateGlobeArcs();
         }
       });
     }
 
-    // Show app
-    var loading = document.getElementById('loading');
-    if (loading) loading.classList.add('hidden');
-    var app = document.getElementById('app');
-    if (app) app.style.display = '';
-  }).catch(function(e){
-    var loading = document.getElementById('loading');
-    if (loading) {
-      loading.innerHTML = '<div style="color:#f87171;font-family:var(--font-mono);font-size:12px;text-align:center;padding:20px;">❌ Failed to load data<br><span style="font-size:10px;color:var(--text-dim);">'+e.message+'</span></div>';
+    // START button
+    var startBtn = document.getElementById('startBtn');
+    if (startBtn) {
+      // If deep link exists, auto-start
+      var hasParams = location.search && location.search.length > 1;
+      if (hasParams) {
+        dismissSplash();
+      } else {
+        startBtn.addEventListener('click', dismissSplash);
+      }
     }
+
+    // Dispatch resize to ensure globe fits
+    window.dispatchEvent(new Event('resize'));
+
+    // Update loading bar
+    var fill = document.getElementById('loadingFill');
+    if (fill) fill.style.width = '100%';
+    var lt = document.getElementById('loadingText');
+    if (lt) lt.textContent = 'Ready to explore';
+  }).catch(function(err) {
+    var lt = document.getElementById('loadingText');
+    if (lt) lt.innerHTML = '❌ Failed to load';
+    var splash = document.getElementById('splash');
+    if (splash) splash.innerHTML += '<div style="color:#f87171;font-size:11px;margin-top:12px;">' + err.message + '</div>' +
+      '<button class="splash-btn" onclick="location.reload()" style="margin-top:16px;">RETRY</button>';
   });
 }
 
 document.addEventListener('DOMContentLoaded', init);
 
-// Prevent double-tap zoom on map
-document.addEventListener('touchstart', function(){}, {passive: true});
+// Prevent overscroll on mobile
+document.addEventListener('touchstart', function() {}, { passive: true });
 </script>
 </body>
 </html>
