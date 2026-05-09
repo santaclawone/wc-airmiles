@@ -1786,9 +1786,12 @@ function dismissSplash() {
   }
 
   // Start globe auto-rotation
-  if (globe && globe.controls) {
-    globe.controls().autoRotate = true;
-  }
+  try {
+    if (globe && globe.controls) {
+      var ctrl = globe.controls();
+      if (ctrl) ctrl.autoRotate = true;
+    }
+  } catch(e) {}
 }
 
 // ═══════════════════════════════════════════════════
