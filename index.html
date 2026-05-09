@@ -1240,8 +1240,7 @@ function updateGlobeArcs() {
       // Stagger: shorter arcs start closer to visible
       return 1 - (i / Math.max(totalArcs - 1, 1)) * 0.4;
     })
-    .arcDashAnimateTime(2000)
-    .arcOpacity(0.85);
+    .arcDashAnimateTime(2000);
 
   // If in host view, also show host city points
   if (isHostView && data) {
