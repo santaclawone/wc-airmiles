@@ -1329,24 +1329,20 @@ function setHoveredTeam(nation, fromGlobe) {
 
 function setHostView(wc) {
   isHostView = true;
-  globe.controls().autoRotate = false;
+  try { if (globe && globe.controls) { var c = globe.controls(); if (c) c.autoRotate = false; } } catch(e){}
 
   // Show arcs with host city focus
   updateGlobeArcs();
 
   // Zoom to host country
   var zoomLevel = wc.hostCities && wc.hostCities.length > 1 ? 3 : 2.5;
-  globe.pointOfView({
-    lat: wc.hostLat,
-    lng: wc.hostLng,
-    altitude: zoomLevel
-  }, 1000);
+  try { globe.pointOfView({ lat: wc.hostLat, lng: wc.hostLng, altitude: zoomLevel }, 1000); } catch(e){}
 }
 
 function setWorldView() {
   isHostView = false;
-  globe.controls().autoRotate = true;
-  globe.pointOfView({ lat: 20, lng: 10, altitude: 2.5 }, 1000);
+  try { if (globe && globe.controls) { var c = globe.controls(); if (c) c.autoRotate = true; } } catch(e){}
+  try { globe.pointOfView({ lat: 20, lng: 10, altitude: 2.5 }, 1000); } catch(e){}
   updateGlobeArcs();
 }
 
