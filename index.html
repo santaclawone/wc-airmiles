@@ -1780,6 +1780,11 @@ function dismissSplash() {
   if (splash) splash.classList.add('hidden');
   if (app) app.classList.add('visible');
 
+  // If data already loaded, ensure first render
+  if (data) {
+    updateForYear(currentYear);
+  }
+
   // Start globe auto-rotation
   if (globe && globe.controls) {
     globe.controls().autoRotate = true;
@@ -1855,26 +1860,14 @@ function init() {
       });
     }
 
-    // START button
-    var startBtn = document.getElementById('startBtn');
-    if (startBtn) {
-      // If deep link exists, auto-start
-      var hasParams = location.search && location.search.length > 1;
-      if (hasParams) {
-        dismissSplash();
-      } else {
-        startBtn.addEventListener('click', dismissSplash);
-      }
+    // START button — auto-start on deep link only
+    var hasParams = location.search && location.search.length > 1;
+    if (hasParams) {
+      dismissSplash();
     }
 
-    // Dispatch resize to ensure globe fits
+    // Update loading bar to show completion
     window.dispatchEvent(new Event('resize'));
-
-    // Update loading bar
-    var fill = document.getElementById('loadingFill');
-    if (fill) fill.style.width = '100%';
-    var lt = document.getElementById('loadingText');
-    if (lt) lt.textContent = 'Ready to explore';
   }).catch(function(err) {
     var lt = document.getElementById('loadingText');
     if (lt) lt.innerHTML = '❌ Failed to load';
@@ -1884,7 +1877,15 @@ function init() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', function() {
+  // Register START button immediately (not inside async load)
+  var startBtn = document.getElementById('startBtn');
+  if (startBtn && !(location.search && location.search.length > 1)) {
+    startBtn.addEventListener('click', dismissSplash);
+  }
+  // Start loading data
+  init();
+});
 
 // Prevent overscroll on mobile
 document.addEventListener('touchstart', function() {}, { passive: true });
