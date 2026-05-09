@@ -45,12 +45,19 @@ html, body {
   touch-action: manipulation;
 }
 
-/* ═══ FULL-VIEWPORT MAP ═══ */
+/* ═══ LAYOUT: sticky sidebar on right ═══ */
 .app {
-  position: fixed;
-  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  grid-template-rows: 100vh;
   width: 100vw;
   height: 100dvh;
+  overflow: hidden;
+}
+
+.map-col {
+  grid-column: 1;
+  position: relative;
   overflow: hidden;
 }
 
@@ -60,11 +67,10 @@ html, body {
   width: 100%;
   height: 100%;
   background: var(--bg);
-  z-index: 1;
 }
 
 .leaflet-control-zoom {
-  display: none; /* hide default zoom — we use gestures */
+  display: none;
 }
 
 .leaflet-control-zoom a {
@@ -73,7 +79,6 @@ html, body {
   border-color: var(--border) !important;
 }
 
-/* Canvas overlay for arcs */
 #arcCanvas {
   position: absolute;
   top: 0; left: 0;
@@ -82,9 +87,208 @@ html, body {
   z-index: 500;
 }
 
-/* ═══ OVERLAY UI ═══ */
+/* ═══ SIDEBAR (always visible, takes right column) ═══ */
+.sidebar {
+  grid-column: 2;
+  background: var(--bg-elevated);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+}
 
-/* ── Top Bar (transparent, overlays map) ── */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-header .logo {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.03em;
+}
+
+.sidebar-header .wc-info {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.sidebar-header .wc-info strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tabs-row {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 4px;
+  padding: 2px;
+  margin: 6px 14px 0;
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  padding: 4px 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.tab.active { background: rgba(6,182,212,0.1); color: var(--accent); }
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+.panel h3 {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.panel h3:first-child { margin-top: 0; }
+
+.mini-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.mini-stat {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 3px;
+  text-align: center;
+}
+
+.mini-stat .val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mini-stat .lbl {
+  font-size: 7px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 1px;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  gap: 6px;
+}
+
+.entry:hover { background: rgba(255,255,255,0.03); }
+.entry.active { background: var(--accent-glow); }
+
+.entry .dot {
+  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+}
+
+.entry .nation {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entry .km {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.bar-bg {
+  width: 30px;
+  height: 2px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 1px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 1px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.detail-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  margin-top: 4px;
+}
+
+.detail-card .name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  font-size: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.stat-row .lbl { color: var(--text-dim); }
+.stat-row .val { font-weight: 500; }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+
+/* ═══ OVERLAYS ON MAP ═══ */
+
+/* Top bar — year nav + filter */
 .top-bar {
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -97,15 +301,6 @@ html, body {
   pointer-events: none;
 }
 .top-bar > * { pointer-events: auto; }
-
-.logo {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
-  letter-spacing: 0.03em;
-  margin-right: auto;
-}
 
 .year-nav {
   display: flex;
@@ -177,18 +372,17 @@ html, body {
 .view-btn.active { background: var(--accent); color: #000; font-weight: 600; border-color: var(--accent); }
 .filter-btn.active { border-color: var(--accent); color: var(--accent); }
 
-/* ── Map Info Badge ── */
+/* Map info badge */
 .map-info {
   position: absolute;
-  top: 56px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 52px;
+  left: 14px;
   z-index: 600;
   background: var(--bg-elevated);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 4px 14px;
+  padding: 4px 12px;
   text-align: center;
   pointer-events: none;
   font-size: 10px;
@@ -200,11 +394,11 @@ html, body {
 .map-info.show { opacity: 1; }
 .map-info strong { color: var(--text); font-weight: 500; font-family: var(--font-mono); }
 
-/* ── Legend ── */
+/* Legend */
 .legend {
   position: absolute;
-  bottom: 70px;
-  left: 10px;
+  bottom: 14px;
+  left: 14px;
   z-index: 600;
   background: var(--bg-elevated);
   backdrop-filter: blur(12px);
@@ -220,13 +414,13 @@ html, body {
 .legend-row { display: flex; align-items: center; gap: 5px; font-size: 8px; color: var(--text-dim); line-height: 1.6; }
 .legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-/* ── Timeline ── */
+/* Timeline overlay at bottom of map */
 .timeline-wrap {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  z-index: 1000;
+  z-index: 700;
   background: linear-gradient(0deg, rgba(7,9,14,0.92) 0%, transparent 100%);
-  padding: 40px 0 8px 0;
+  padding: 36px 0 6px 0;
   pointer-events: none;
 }
 .timeline-wrap > * { pointer-events: auto; }
@@ -248,20 +442,20 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s ease;
   background: transparent;
   border: 1px solid transparent;
-  min-width: 46px;
+  min-width: 42px;
 }
 .timeline-item:hover { background: rgba(255,255,255,0.03); }
 .timeline-item.active { background: var(--accent-glow); border-color: var(--border-active); }
 
 .timeline-item .yr {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1.2;
   color: rgba(255,255,255,0.35);
@@ -277,239 +471,30 @@ html, body {
 }
 .timeline-item.active .host { color: rgba(6,182,212,0.5); }
 
-/* ── Statistics Sidebar Overlay ── */
-.sidebar-toggle {
-  position: absolute;
-  top: 56px;
-  right: 10px;
-  z-index: 700;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--bg-elevated);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  transition: all 0.15s ease;
-}
-.sidebar-toggle:hover { border-color: var(--accent); color: var(--accent); }
-.sidebar-toggle.active { background: var(--accent); color: #000; border-color: var(--accent); }
-
-.sidebar-overlay {
-  position: absolute;
-  top: 0; right: 0; bottom: 0;
-  width: min(340px, 85vw);
-  z-index: 900;
-  background: var(--bg-elevated);
-  backdrop-filter: blur(20px);
-  border-left: 1px solid var(--border);
-  transform: translateX(105%);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.sidebar-overlay.open { transform: translateX(0); }
-
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-close {
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
-}
-
-.tabs {
-  display: flex;
-  gap: 2px;
-  background: rgba(255,255,255,0.02);
-  border-radius: 4px;
-  padding: 2px;
-  margin: 0 14px;
-}
-
-.tab {
-  flex: 1;
-  padding: 5px 0;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 500;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: center;
-}
-.tab.active { background: rgba(6,182,212,0.1); color: var(--accent); }
-
-.sidebar-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 14px 20px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.panel { display: none; }
-.panel.active { display: block; }
-
-.panel h3 {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
-  margin-bottom: 5px;
-  font-weight: 500;
-}
-
-.mini-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  margin-bottom: 10px;
-}
-
-.mini-stat {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 5px 3px;
-  text-align: center;
-}
-
-.mini-stat .val {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent);
-}
-
-.mini-stat .lbl {
-  font-size: 7px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-top: 1px;
-}
-
-.entry {
-  display: flex;
-  align-items: center;
-  padding: 4px 6px;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: all 0.1s ease;
-  gap: 6px;
-}
-.entry:hover { background: rgba(255,255,255,0.03); }
-.entry.active { background: var(--accent-glow); }
-
-.entry .dot {
-  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
-}
-
-.entry .nation {
-  flex: 1;
-  font-size: 11px;
-  font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.entry .km {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-
-.bar-bg {
-  width: 30px;
-  height: 2px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 1px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.bar-fill {
-  height: 100%;
-  border-radius: 1px;
-  background: var(--accent);
-  transition: width 0.4s ease;
-}
-
-/* Detail card */
-.detail-card {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px;
-  margin-top: 4px;
-}
-
-.detail-card .name {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.stat-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 2px 0;
-  font-size: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-}
-.stat-row .lbl { color: var(--text-dim); }
-.stat-row .val { font-weight: 500; }
-
-hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
-
-/* ═══ MOBILE: BOTTOM DRAWER instead of sidebar overlay ═══ */
-@media (max-width: 640px) {
-  .sidebar-overlay {
-    display: none;
+/* ═══ MOBILE ═══ */
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
   }
-
-  .sidebar-toggle {
-    right: 10px;
-    top: 56px;
+  
+  .sidebar {
+    display: none;
   }
 
   .bottom-drawer {
     position: absolute;
-    left: 0; right: 0; bottom: 52px; /* above timeline */
+    left: 0; right: 0; bottom: 0;
     z-index: 800;
     background: var(--bg-elevated);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--border);
     border-radius: 14px 14px 0 0;
-    transform: translateY(calc(100% - 36px));
+    transform: translateY(calc(100% - 44px));
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     will-change: transform;
     touch-action: pan-y;
-    max-height: 70dvh;
+    max-height: 75dvh;
     display: flex;
     flex-direction: column;
   }
@@ -520,8 +505,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
 
   .drawer-handle {
     display: flex;
-    justify-content: center;
-    padding: 8px 0 4px;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 0 2px;
     cursor: grab;
     touch-action: none;
     flex-shrink: 0;
@@ -534,13 +520,23 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
     height: 4px;
     border-radius: 2px;
     background: rgba(255,255,255,0.15);
+    margin-bottom: 2px;
+  }
+
+  .drawer-peek-tip {
+    font-size: 8px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.5;
   }
 
   .drawer-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 14px 8px;
+    padding: 0 14px 6px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
@@ -576,40 +572,61 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
     flex-shrink: 0;
   }
 
-  .drawer-scroll {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 14px 16px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .bottom-drawer .tabs {
-    margin: 0 14px;
+  .drawer-tabs {
+    display: flex;
+    gap: 2px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 4px;
+    padding: 2px;
+    margin: 4px 14px 0;
     flex-shrink: 0;
   }
 
-  .timeline-wrap {
-    padding-top: 30px;
-  }
-
-  .map-info {
+  .drawer-tabs .tab {
+    flex: 1;
+    padding: 5px 0;
+    font-family: var(--font-mono);
     font-size: 9px;
-    padding: 3px 10px;
-    top: 52px;
-    pointer-events: auto;
+    font-weight: 500;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
   }
 
-  .legend {
-    display: none;
+  .drawer-tabs .tab.active { background: rgba(6,182,212,0.1); color: var(--accent); }
+
+  .drawer-panel { display: none; }
+  .drawer-panel.active { display: block; }
+
+  .drawer-panel h3 {
+    font-family: var(--font-mono);
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+    margin-top: 6px;
+    font-weight: 500;
   }
 
-  .top-bar {
-    padding: 8px 10px;
+  .drawer-panel h3:first-child { margin-top: 0; }
+
+  .drawer-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 14px 12px;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .logo { font-size: 11px; }
+  .top-bar { padding: 6px 8px; }
   .year-display { font-size: 15px; }
-  .view-btn, .filter-btn { font-size: 8px; padding: 3px 6px; }
+  .view-btn, .filter-btn { font-size: 8px; padding: 3px 5px; }
+  .map-info { top: 48px; left: 8px; font-size: 9px; padding: 3px 10px; }
+  .legend { display: none; }
 }
 
 /* ═══ LOADING ═══ */
@@ -634,9 +651,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .loading-text { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
-
-/* ═══ NO TRANSITION ═══ */
-.no-transition { transition: none !important; }
 </style>
 </head>
 <body>
@@ -648,63 +662,83 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
 
 <div class="app" id="app" style="display:none;">
 
-  <!-- MAP (full viewport) -->
-  <div id="map"></div>
-  <canvas id="arcCanvas"></canvas>
+  <!-- MAP COLUMN -->
+  <div class="map-col">
+    <div id="map"></div>
+    <canvas id="arcCanvas"></canvas>
 
-  <!-- Top Bar (overlay) -->
-  <div class="top-bar">
-    <span class="logo">✈️ WC AIR</span>
-    <div class="year-nav">
-      <button class="nav-btn" id="prevYear">◀</button>
-      <div class="year-host">
-        <span class="year-display" id="yearDisplay">1930</span>
-        <span class="host-display" id="hostDisplay">Uruguay</span>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="year-nav">
+        <button class="nav-btn" id="prevYear">◀</button>
+        <div class="year-host">
+          <span class="year-display" id="yearDisplay">1930</span>
+          <span class="host-display" id="hostDisplay">Uruguay</span>
+        </div>
+        <button class="nav-btn" id="nextYear">▶</button>
       </div>
-      <button class="nav-btn" id="nextYear">▶</button>
+      <div class="view-filter-group">
+        <button class="view-btn active" data-view="world">🌍</button>
+        <button class="view-btn" data-view="host">📍</button>
+        <button class="filter-btn" id="filterKnockout">QF+</button>
+      </div>
     </div>
-    <div class="view-filter-group">
-      <button class="view-btn active" data-view="world">🌍</button>
-      <button class="view-btn" data-view="host">📍</button>
-      <button class="filter-btn" id="filterKnockout">QF+</button>
+
+    <!-- Map Info -->
+    <div class="map-info" id="mapInfo">
+      <strong id="infoYear">1930</strong> <span id="infoHost">Uruguay</span> · <span id="infoTeams">13</span> teams · <span id="infoKm">0</span> km
+    </div>
+
+    <!-- Legend -->
+    <div class="legend" id="legend">
+      <div class="legend-row"><span class="legend-dot" style="background:var(--europe)"></span> Europe</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--south-america)"></span> S. Am.</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--africa)"></span> Africa</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--asia)"></span> Asia</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--north-america)"></span> N. Am.</div>
+      <div class="legend-row"><span class="legend-dot" style="background:var(--oceania)"></span> Oceania</div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-wrap">
+      <div class="timeline" id="timeline"></div>
     </div>
   </div>
 
-  <!-- Map Info Badge -->
-  <div class="map-info" id="mapInfo">
-    <strong id="infoYear">1930</strong> <span id="infoHost">Uruguay</span> · <span id="infoTeams">13</span> teams · <span id="infoKm">0</span> km
-  </div>
-
-  <!-- Sidebar toggle (desktop) -->
-  <button class="sidebar-toggle" id="sidebarToggle">📊</button>
-
-  <!-- Sidebar Overlay (desktop) -->
-  <aside class="sidebar-overlay" id="sidebarOverlay">
+  <!-- SIDEBAR (desktop) -->
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--accent);">📊 STATISTICS</span>
-      <button class="sidebar-close" id="sidebarClose">✕</button>
+      <span class="logo">✈️ WC AIR</span>
+      <div class="wc-info">
+        <strong id="sYear">1930</strong>
+        <span id="sHost" style="display:block;font-size:9px;">Uruguay</span>
+      </div>
     </div>
-    <div class="tabs">
-      <button class="tab active" data-panel="current">CURRENT</button>
+    <div class="tabs-row">
+      <button class="tab active" data-panel="current">TEAMS</button>
       <button class="tab" data-panel="alltime">ALL-TIME</button>
       <button class="tab" data-panel="deep">DEEP DIVE</button>
     </div>
     <div class="sidebar-scroll">
 
       <div class="panel active" id="panel-current">
-        <h3>Tournament</h3>
+        <h3>This Tournament</h3>
         <div class="mini-stats" id="miniStats">
           <div class="mini-stat"><div class="val" id="statTeams">—</div><div class="lbl">Teams</div></div>
-          <div class="mini-stat"><div class="val" id="statTotal">—</div><div class="lbl">Total km</div></div>
+          <div class="mini-stat"><div class="val" id="statTotal">—</div><div class="lbl">Ttl km</div></div>
           <div class="mini-stat"><div class="val" id="statAvg">—</div><div class="lbl">Avg km</div></div>
-          <div class="mini-stat"><div class="val" id="statFurthest">—</div><div class="lbl">Furthest</div></div>
+          <div class="mini-stat"><div class="val" id="statFurthest">—</div><div class="lbl">Most km</div></div>
         </div>
-        <h3>Teams</h3>
+        <h3>Teams Ranked by Distance</h3>
         <div id="teamList"></div>
+        <div class="detail-card" id="detailCard" style="display:none;">
+          <div class="name" id="detailName">—</div>
+          <div id="detailStats"></div>
+        </div>
       </div>
 
       <div class="panel" id="panel-alltime">
-        <h3>Leaderboard</h3>
+        <h3>All-Time Leaderboard</h3>
         <div id="alltimeList"></div>
       </div>
 
@@ -714,68 +748,50 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
         <div id="marathonList"></div>
         <hr>
         <h3>Efficiency Kings</h3>
-        <p style="font-size:9px;color:var(--text-dim);margin-bottom:4px;">Most progress per km</p>
+        <p style="font-size:9px;color:var(--text-dim);margin-bottom:4px;">Most progress per km travelled</p>
         <div id="efficiencyList"></div>
-      </div>
-
-      <div class="detail-card" id="detailCard">
-        <div class="name" id="detailName">—</div>
-        <div id="detailStats"></div>
       </div>
 
     </div>
   </aside>
 
-  <!-- Bottom Drawer (mobile) -->
+  <!-- MOBILE DRAWER -->
   <div class="bottom-drawer" id="bottomDrawer">
     <div class="drawer-handle" id="drawerHandle">
       <div class="drawer-handle-bar"></div>
+      <div class="drawer-peek-tip">↑ SWIPE UP FOR STATS</div>
     </div>
     <div class="drawer-header">
       <div class="mini-stats" id="drawerMiniStats">
         <div class="mini-stat"><div class="val" id="dStatTeams">—</div><div class="lbl">Teams</div></div>
-        <div class="mini-stat"><div class="val" id="dStatTotal">—</div><div class="lbl">Total km</div></div>
+        <div class="mini-stat"><div class="val" id="dStatTotal">—</div><div class="lbl">Ttl km</div></div>
         <div class="mini-stat"><div class="val" id="dStatAvg">—</div><div class="lbl">Avg km</div></div>
-        <div class="mini-stat"><div class="val" id="dStatFurthest">—</div><div class="lbl">Furthest</div></div>
+        <div class="mini-stat"><div class="val" id="dStatFurthest">—</div><div class="lbl">Most km</div></div>
       </div>
       <button class="drawer-close" id="drawerClose">✕</button>
     </div>
-    <div class="tabs">
-      <button class="tab active" data-panel="d-current">CURRENT</button>
-      <button class="tab" data-panel="d-alltime">ALL-TIME</button>
-      <button class="tab" data-panel="d-deep">DEEP DIVE</button>
+    <div class="drawer-tabs">
+      <button class="tab active" data-panel="d--current">TEAMS</button>
+      <button class="tab" data-panel="d--alltime">ALL-TIME</button>
+      <button class="tab" data-panel="d--deep">DEEP</button>
     </div>
     <div class="drawer-scroll">
-
-      <div class="panel active" id="panel-d-current">
-        <h3>Teams</h3>
+      <div class="drawer-panel active" id="panel-d--current">
         <div id="dTeamList"></div>
       </div>
-
-      <div class="panel" id="panel-d-alltime">
-        <h3>All-Time</h3>
+      <div class="drawer-panel" id="panel-d--alltime">
         <div id="dAlltimeList"></div>
       </div>
-
-      <div class="panel" id="panel-d-deep">
-        <h3>Marathon Men</h3>
+      <div class="drawer-panel" id="panel-d--deep">
         <div id="dMarathonList"></div>
         <hr>
-        <h3>Efficiency Kings</h3>
         <div id="dEfficiencyList"></div>
       </div>
-
-      <div class="detail-card" id="dDetailCard">
+      <div class="detail-card" id="dDetailCard" style="display:none;">
         <div class="name" id="dDetailName">—</div>
         <div id="dDetailStats"></div>
       </div>
-
     </div>
-  </div>
-
-  <!-- Timeline (bottom overlay) -->
-  <div class="timeline-wrap">
-    <div class="timeline" id="timeline"></div>
   </div>
 
 </div>
@@ -785,13 +801,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
 
 <script>
 /* ═══════════════════════════════════════════════════
-   WC Air Miles v2 — Full-viewport, tapered arcs,
-   animated draw-in, bottom drawer on mobile
+   WC Air Miles v3 — sticky sidebar, full-viewport map,
+   mobile bottom drawer, tapered animated arcs
    ═══════════════════════════════════════════════════ */
 
 const DATA_URL = 'data/airmiles.json';
 
-// ── Continent data ──
 const CONTINENTS = {
   'Algeria':'africa','Angola':'africa','Cameroon':'africa','Cape Verde':'africa',
   'DR Congo':'africa','Egypt':'africa','Ghana':'africa','Ivory Coast':'africa',
@@ -822,6 +837,7 @@ const CONTINENTS = {
   'Kuwait':'asia','North Korea':'asia','Qatar':'asia','Saudi Arabia':'asia',
   'South Korea':'asia','UAE':'asia','Uzbekistan':'asia',
 };
+
 const CONT_COLORS = {
   'europe':'#60a5fa','south-america':'#4ade80','africa':'#fb923c',
   'asia':'#f87171','north-america':'#facc15','oceania':'#c084fc',
@@ -835,6 +851,7 @@ function fmt(n) {
   if (n >= 1000) return Math.round(n).toLocaleString();
   return Math.round(n).toString();
 }
+
 function stageRank(s) {
   var r = {'Group':0,'Group Stage':0,'R16':1,'Quarter-finals':2,'QF':2,
     'Semi-finals':3,'SF':3,'3rd Place':3,'4th Place':2,'Runner-up':4,'Runners-up':4,'Winner':5};
@@ -851,11 +868,11 @@ var map = null;
 var canvas = null;
 var ctx = null;
 var animFrame = null;
-var drawProgress = 0; // 0..1 for draw-in animation
 var isDrawing = false;
+var arcAnimState = null;
 
 // ═══════════════════════════════════════════════════
-//  CANVAS — TAPERED ARCS WITH DRAW-IN ANIMATION
+//  CANVAS — TAPERED ARCS WITH DRAW-IN
 // ═══════════════════════════════════════════════════
 
 function initCanvas() {
@@ -889,9 +906,6 @@ function arcPath(start, end) {
   };
 }
 
-/**
- * Evaluate a quadratic bezier at t ∈ [0,1]
- */
 function bezierPoint(start, cp, end, t) {
   var mt = 1 - t;
   return {
@@ -900,38 +914,28 @@ function bezierPoint(start, cp, end, t) {
   };
 }
 
-function drawTaperedArc(arc, color, pulse, progress, order) {
-  // Tapered: thick at start, thin at end
-  // Max thickness scales with distance
+function drawTaperedArc(arc, color, pulse, progress) {
+  if (progress <= 0) return;
+
   var dx = arc.end.x - arc.start.x;
   var dy = arc.end.y - arc.start.y;
   var dist = Math.sqrt(dx*dx + dy*dy);
   var maxWidth = Math.min(Math.max(dist * 0.018, 2.5), 8);
   var minWidth = 0.8;
-  // Stagger: arcs start sequentially
-  var staggerDelay = order * 0.08; // seconds
-  // Progress advances from 0→1 for this specific arc
-  // We'll handle this in the animation loop
 
-  if (progress <= 0) return;
-
-  // Core line — drawn as a sequence of line segments with decreasing width
   var steps = Math.max(12, Math.floor(dist * 0.08));
   var drawTo = Math.floor(steps * progress);
 
+  // Core line — tapered segments
   ctx.save();
-
   for (var i = 0; i < drawTo; i++) {
     var t0 = i / steps;
     var t1 = Math.min((i + 1) / steps, progress);
     var p0 = bezierPoint(arc.start, arc.cp, arc.end, t0);
     var p1 = bezierPoint(arc.start, arc.cp, arc.end, t1);
-
-    // Width: thick at start (t=0), thin at end (t=1)
     var w0 = maxWidth - (maxWidth - minWidth) * t0;
     var w1 = maxWidth - (maxWidth - minWidth) * t1;
     var avgW = (w0 + w1) / 2;
-
     ctx.strokeStyle = color;
     ctx.globalAlpha = 0.75;
     ctx.lineWidth = avgW * pulse;
@@ -942,10 +946,9 @@ function drawTaperedArc(arc, color, pulse, progress, order) {
     ctx.lineTo(p1.x, p1.y);
     ctx.stroke();
   }
-
   ctx.restore();
 
-  // Outer glow pass (full arc, fainter, tapered)
+  // Glow pass
   if (progress >= 0.5) {
     ctx.save();
     ctx.strokeStyle = color;
@@ -968,7 +971,7 @@ function drawTaperedArc(arc, color, pulse, progress, order) {
     ctx.restore();
   }
 
-  // Origin dot (brighter, larger)
+  // Origin dot
   ctx.save();
   ctx.shadowBlur = 8 * pulse;
   ctx.shadowColor = color;
@@ -979,7 +982,7 @@ function drawTaperedArc(arc, color, pulse, progress, order) {
   ctx.fill();
   ctx.restore();
 
-  // Small trailing "plane" dot near the progress head (direction indicator)
+  // Moving "plane" dot
   if (progress > 0 && progress < 1) {
     var hp = bezierPoint(arc.start, arc.cp, arc.end, progress);
     ctx.save();
@@ -993,7 +996,7 @@ function drawTaperedArc(arc, color, pulse, progress, order) {
     ctx.restore();
   }
 
-  // Arrow-head at end (only when arc is fully drawn)
+  // Arrow-head at destination
   if (progress >= 1) {
     var tip = arc.end;
     var back = bezierPoint(arc.start, arc.cp, arc.end, 0.97);
@@ -1015,59 +1018,51 @@ function drawTaperedArc(arc, color, pulse, progress, order) {
 }
 
 // ═══════════════════════════════════════════════════
-//  DRAW-IN ANIMATION ENGINE
+//  DRAW-IN ANIMATION LOOP
 // ═══════════════════════════════════════════════════
 
-var arcAnimState = null; // { arcs: [...], startTime: ms }
-
 function drawArcsAnimated() {
-  if (!ctx || !map || !data) return;
+  if (!ctx || !map || !data) { animFrame = requestAnimationFrame(drawArcsAnimated); return; }
   var wc = data.worldCups.find(function(c){return c.year===currentYear;});
-  if (!wc) return;
+  if (!wc) { animFrame = requestAnimationFrame(drawArcsAnimated); return; }
 
-  var w = canvas.width / (window.devicePixelRatio || 1);
-  var h = canvas.height / (window.devicePixelRatio || 1);
+  var dpr = window.devicePixelRatio || 1;
+  var w = canvas.width / dpr;
+  var h = canvas.height / dpr;
   ctx.clearRect(0, 0, w, h);
 
   if (!arcAnimState) {
-    // Build arc data
     var arcs = [];
     wc.teams.forEach(function(t) {
       if (filterQF && stageRank(t.furthestStage) < 2) return;
       var start = map.latLngToContainerPoint([t.capitalLat, t.capitalLng]);
       var end = map.latLngToContainerPoint([t.firstHostLat, t.firstHostLng]);
-      var arc = arcPath(start, end);
+      var a = arcPath(start, end);
       arcs.push({
-        arc: arc,
+        arc: a,
         color: contColor(t.nation),
         nation: t.nation,
         dist: Math.sqrt(Math.pow(end.x-start.x,2)+Math.pow(end.y-start.y,2))
       });
     });
-    // Sort by distance (shortest first — they finish faster)
     arcs.sort(function(a,b){return a.dist-b.dist;});
     arcAnimState = { arcs: arcs, startTime: performance.now() };
     isDrawing = true;
   }
 
-  var elapsed = (performance.now() - arcAnimState.startTime) / 1000; // seconds
-  var totalDuration = 1.2 + arcAnimState.arcs.length * 0.035; // total animation time
+  var elapsed = (performance.now() - arcAnimState.startTime) / 1000;
   var pulse = 0.7 + 0.3 * Math.sin(elapsed * 1.8);
   var allDone = true;
 
   arcAnimState.arcs.forEach(function(a, idx) {
-    var stagger = idx * 0.04;
-    var arcDuration = Math.max(0.35, Math.min(a.dist * 0.004, 0.9));
+    var stagger = idx * 0.035;
+    var arcDuration = Math.max(0.3, Math.min(a.dist * 0.004, 0.8));
     var t = Math.max(0, Math.min(1, (elapsed - stagger) / arcDuration));
     if (t < 1) allDone = false;
-    drawTaperedArc(a.arc, a.color, pulse, t, idx);
+    drawTaperedArc(a.arc, a.color, pulse, t);
   });
 
-  if (allDone) {
-    isDrawing = false;
-    // Keep drawing once complete (ambient glow pulse)
-  }
-
+  if (allDone) isDrawing = false;
   animFrame = requestAnimationFrame(drawArcsAnimated);
 }
 
@@ -1085,7 +1080,7 @@ function stopArcAnimation() {
 }
 
 // ═══════════════════════════════════════════════════
-//  HOST VIEW (Leaflet)
+//  HOST VIEW
 // ═══════════════════════════════════════════════════
 
 var markerLayer = null;
@@ -1094,21 +1089,22 @@ function renderHostView(wc) {
   if (markerLayer) map.removeLayer(markerLayer);
   stopArcAnimation();
   if (ctx) {
-    var w = canvas.width / (window.devicePixelRatio || 1);
-    var h = canvas.height / (window.devicePixelRatio || 1);
-    ctx.clearRect(0, 0, w, h);
+    var dpr = window.devicePixelRatio || 1;
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
   }
   markerLayer = L.layerGroup().addTo(map);
   map.setView([wc.hostLat, wc.hostLng], 4);
-  wc.hostCities.forEach(function(city) {
-    L.circleMarker([city.lat, city.lng], {
-      radius: 6,
-      color: '#06b6d4',
-      fillColor: 'rgba(6,182,212,0.15)',
-      fillOpacity: 0.5,
-      weight: 1.5,
-    }).addTo(markerLayer).bindTooltip(city.name, {direction:'top', className:'dark-tooltip'});
-  });
+  if (wc.hostCities && wc.hostCities.length) {
+    wc.hostCities.forEach(function(city) {
+      L.circleMarker([city.lat, city.lng], {
+        radius: 6,
+        color: '#06b6d4',
+        fillColor: 'rgba(6,182,212,0.15)',
+        fillOpacity: 0.5,
+        weight: 1.5,
+      }).addTo(markerLayer).bindTooltip(city.name, {direction:'top', className:'dark-tooltip'});
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1117,35 +1113,51 @@ function renderHostView(wc) {
 
 function updateForYear(year) {
   currentYear = year;
-  var wc = data.worldCups.find(function(c) { return c.year === year; });
+  var wc = data.worldCups.find(function(c){return c.year===year;});
   if (!wc) return;
 
+  // Header
   document.getElementById('yearDisplay').textContent = year;
   document.getElementById('hostDisplay').textContent = wc.host;
+  document.getElementById('sYear').textContent = year;
+  document.getElementById('sHost').textContent = wc.host;
 
   var total = wc.teams.reduce(function(s,t){return s+t.totalKm;},0);
   var longest = wc.teams.reduce(function(a,b){return a.totalKm>b.totalKm?a:b;}, wc.teams[0]);
 
-  // Info badge
-  document.getElementById('infoYear').textContent = year;
-  document.getElementById('infoHost').textContent = wc.host;
-  document.getElementById('infoTeams').textContent = wc.teams.length;
-  document.getElementById('infoKm').textContent = fmt(total);
+  // Map info badge
+  var infoEl = document.getElementById('mapInfo');
+  if (infoEl) {
+    document.getElementById('infoYear').textContent = year;
+    document.getElementById('infoHost').textContent = wc.host;
+    document.getElementById('infoTeams').textContent = wc.teams.length;
+    document.getElementById('infoKm').textContent = fmt(total);
+    infoEl.classList.add('show');
+  }
 
-  // Mini stats (desktop sidebar + mobile drawer)
+  // Legend fade in
+  var legendEl = document.getElementById('legend');
+  if (legendEl) legendEl.classList.add('show');
+
+  // Mini stats (sidebar + drawer)
   ['statTeams','dStatTeams'].forEach(function(id){
-    document.getElementById(id).textContent = wc.teams.length;
+    var el = document.getElementById(id);
+    if (el) el.textContent = wc.teams.length;
   });
   ['statTotal','dStatTotal'].forEach(function(id){
-    document.getElementById(id).textContent = fmt(total);
+    var el = document.getElementById(id);
+    if (el) el.textContent = fmt(total);
   });
   ['statAvg','dStatAvg'].forEach(function(id){
-    document.getElementById(id).textContent = wc.teams.length ? fmt(total/wc.teams.length) : '—';
+    var el = document.getElementById(id);
+    if (el) el.textContent = wc.teams.length ? fmt(total/wc.teams.length) : '—';
   });
   ['statFurthest','dStatFurthest'].forEach(function(id){
-    document.getElementById(id).textContent = longest ? fmt(longest.totalKm) : '—';
+    var el = document.getElementById(id);
+    if (el) el.textContent = longest ? fmt(longest.totalKm) : '—';
   });
 
+  // Team lists
   renderTeamList(wc);
   renderDrawerTeamList(wc);
 
@@ -1154,72 +1166,69 @@ function updateForYear(year) {
     el.classList.toggle('active', parseInt(el.dataset.year)===year);
   });
 
-  // Map render
+  // Scroll timeline
+  var tel = document.querySelector('.timeline-item[data-year="'+year+'"]');
+  if (tel) tel.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+
+  // Map
   if (currentView === 'world') {
     if (markerLayer) { map.removeLayer(markerLayer); markerLayer = null; }
+    map.setView([15, 0], 2, {animate: true});
     startArcAnimation();
   } else {
     renderHostView(wc);
   }
 
   selectedTeam = null;
-  document.getElementById('detailCard').style.display = 'none';
-  document.getElementById('dDetailCard').style.display = 'none';
-
-  // Scroll timeline
-  var tel = document.querySelector('.timeline-item[data-year="'+year+'"]');
-  if (tel) tel.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
-
-  // Show info badge after a moment
-  setTimeout(function(){
-    document.getElementById('mapInfo').classList.add('show');
-    document.querySelector('.legend').classList.add('show');
-  }, 100);
-
-  // Map: ensure world view shows the whole planet
-  if (currentView === 'world') {
-    map.setView([15, 0], 2, {animate: true});
-  }
+  var dc = document.getElementById('detailCard');
+  if (dc) dc.style.display = 'none';
+  var ddc = document.getElementById('dDetailCard');
+  if (ddc) ddc.style.display = 'none';
 }
 
 function renderTeamList(wc) {
   var sorted = wc.teams.slice().sort(function(a,b){return b.totalKm-a.totalKm;});
   var maxKm = sorted.length ? sorted[0].totalKm : 1;
-  document.getElementById('teamList').innerHTML = sorted.map(function(t){
+  var html = sorted.map(function(t){
     var c = contColor(t.nation);
-    return '<div class="entry" data-nation="'+t.nation+'" onclick="selectTeam(\''+t.nation+'\')">'+
+    var safeNation = t.nation.replace(/'/g, "\\'");
+    return '<div class="entry" data-nation="'+t.nation+'" onclick="selectTeam(\''+safeNation+'\')">'+
       '<span class="dot" style="background:'+c+'"></span>'+
       '<span class="nation">'+t.nation+'</span>'+
       '<span class="km">'+fmt(t.totalKm)+'</span>'+
       '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.totalKm/maxKm*100)+'%"></div></div></div>';
   }).join('');
+  var el = document.getElementById('teamList');
+  if (el) el.innerHTML = html;
 }
 
 function renderDrawerTeamList(wc) {
   var sorted = wc.teams.slice().sort(function(a,b){return b.totalKm-a.totalKm;});
   var maxKm = sorted.length ? sorted[0].totalKm : 1;
-  document.getElementById('dTeamList').innerHTML = sorted.map(function(t){
+  var html = sorted.map(function(t){
     var c = contColor(t.nation);
-    return '<div class="entry" data-nation="'+t.nation+'" onclick="dSelectTeam(\''+t.nation+'\')">'+
+    var safeNation = t.nation.replace(/'/g, "\\'");
+    return '<div class="entry" data-nation="'+t.nation+'" onclick="dSelectTeam(\''+safeNation+'\')">'+
       '<span class="dot" style="background:'+c+'"></span>'+
       '<span class="nation">'+t.nation+'</span>'+
       '<span class="km">'+fmt(t.totalKm)+'</span>'+
       '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.totalKm/maxKm*100)+'%"></div></div></div>';
   }).join('');
+  var el = document.getElementById('dTeamList');
+  if (el) el.innerHTML = html;
 }
-
-// ═══════════════════════════════════════════════════
-//  TEAM SELECTION
-// ═══════════════════════════════════════════════════
 
 function selectTeam(nation) {
   var wc = data.worldCups.find(function(c){return c.year===currentYear;});
   if (!wc) return;
   var t = wc.teams.find(function(t2){return t2.nation===nation;});
   if (!t) return;
-  document.getElementById('detailCard').style.display = 'block';
-  document.getElementById('detailName').textContent = t.nation+' — '+wc.year;
-  document.getElementById('detailStats').innerHTML = buildDetailHTML(t);
+  var dc = document.getElementById('detailCard');
+  if (dc) {
+    dc.style.display = 'block';
+    document.getElementById('detailName').textContent = t.nation+' — '+wc.year;
+    document.getElementById('detailStats').innerHTML = buildDetailHTML(t);
+  }
   document.querySelectorAll('#teamList .entry').forEach(function(el){
     el.classList.toggle('active', el.dataset.nation===nation);
   });
@@ -1230,9 +1239,12 @@ function dSelectTeam(nation) {
   if (!wc) return;
   var t = wc.teams.find(function(t2){return t2.nation===nation;});
   if (!t) return;
-  document.getElementById('dDetailCard').style.display = 'block';
-  document.getElementById('dDetailName').textContent = t.nation+' — '+wc.year;
-  document.getElementById('dDetailStats').innerHTML = buildDetailHTML(t);
+  var dc = document.getElementById('dDetailCard');
+  if (dc) {
+    dc.style.display = 'block';
+    document.getElementById('dDetailName').textContent = t.nation+' — '+wc.year;
+    document.getElementById('dDetailStats').innerHTML = buildDetailHTML(t);
+  }
   document.querySelectorAll('#dTeamList .entry').forEach(function(el){
     el.classList.toggle('active', el.dataset.nation===nation);
   });
@@ -1254,9 +1266,10 @@ function buildDetailHTML(t) {
 // ═══════════════════════════════════════════════════
 
 function buildTimeline() {
-  document.getElementById('timeline').innerHTML = data.worldCups.map(function(wc){
+  var el = document.getElementById('timeline');
+  if (!el) return;
+  el.innerHTML = data.worldCups.map(function(wc){
     var act = wc.year===currentYear?'active':'';
-    // Country code shortener for space
     var hostShort = wc.host.split('/')[0].slice(0,7);
     return '<div class="timeline-item '+act+'" data-year="'+wc.year+'" onclick="updateForYear('+wc.year+')">'+
       '<div class="yr">'+wc.year+'</div>'+
@@ -1265,65 +1278,77 @@ function buildTimeline() {
 }
 
 // ═══════════════════════════════════════════════════
-//  ALL-TIME STATS
+//  ALL-TIME + DEEP DIVE
 // ═══════════════════════════════════════════════════
 
 function buildAllTime() {
   var lb = data.allTimeStats.leaderboard;
+  if (!lb) return;
   var maxKm = lb.length ? lb[0].totalKm : 1;
+
   var html = lb.map(function(t,i){
-    return '<div class="entry" onclick="showTeamHistory(\''+t.nation+'\')">'+
+    return '<div class="entry" onclick="showTeamHistory(\''+t.nation.replace(/'/g,"\\'")+'\')">'+
       '<span style="width:16px;font-size:10px;color:var(--text-dim);text-align:center;flex-shrink:0;">'+(i+1)+'</span>'+
       '<span class="nation">'+t.nation+'</span>'+
       '<span class="km">'+fmt(t.totalKm)+'</span>'+
       '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.totalKm/maxKm*100)+'%"></div></div></div>';
   }).join('');
-  document.getElementById('alltimeList').innerHTML = html;
-  document.getElementById('dAlltimeList').innerHTML = html;
+
+  var ael = document.getElementById('alltimeList');
+  if (ael) ael.innerHTML = html;
+  var dael = document.getElementById('dAlltimeList');
+  if (dael) dael.innerHTML = html;
 
   // Marathon men
   var byAvg = lb.slice().sort(function(a,b){return b.avgKm-a.avgKm;}).slice(0,10);
-  var maxAvg = byAvg.length?byAvg[0].avgKm:1;
+  var maxAvg = byAvg.length ? byAvg[0].avgKm : 1;
   var mhtml = byAvg.map(function(t,i){
     return '<div class="entry"><span style="width:16px;font-size:10px;color:var(--text-dim);text-align:center;flex-shrink:0;">'+(i+1)+'</span>'+
       '<span class="nation">'+t.nation+' <span style="color:var(--text-dim);font-size:9px;">('+t.appearances+')</span></span>'+
       '<span class="km">'+fmt(t.avgKm)+'</span>'+
       '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.avgKm/maxAvg*100)+'%"></div></div></div>';
   }).join('');
-  document.getElementById('marathonList').innerHTML = mhtml;
-  document.getElementById('dMarathonList').innerHTML = mhtml;
+  var mel = document.getElementById('marathonList');
+  if (mel) mel.innerHTML = mhtml;
+  var dmel = document.getElementById('dMarathonList');
+  if (dmel) dmel.innerHTML = mhtml;
 
   // Efficiency kings
   var stageVal = {'Group':1,'R16':2,'Quarter-finals':3,'QF':3,
     'Semi-finals':4,'SF':4,'3rd Place':4,'4th Place':3,'Runner-up':5,'Runners-up':5,'Winner':6};
   var eff = lb.filter(function(t){return t.avgKm>0&&t.bestFinish;}).map(function(t){
-    return {nation:t.nation, bestFinish:t.bestFinish, avgKm:t.avgKm,
-      score:(stageVal[t.bestFinish]||1)/(t.avgKm/10000)};
+    var score = (stageVal[t.bestFinish]||1) / (t.avgKm/10000);
+    return {nation:t.nation, bestFinish:t.bestFinish, avgKm:t.avgKm, score:score};
   }).sort(function(a,b){return b.score-a.score;}).slice(0,10);
-  var maxEff = eff.length?eff[0].score:1;
+  var maxEff = eff.length ? eff[0].score : 1;
   var ehtml = eff.map(function(t){
     return '<div class="entry"><span style="width:16px;color:var(--text-dim);text-align:center;flex-shrink:0;">✦</span>'+
       '<span class="nation">'+t.nation+' <span style="color:var(--text-dim);font-size:9px;">'+t.bestFinish+'</span></span>'+
       '<span class="km">'+fmt(t.avgKm)+'</span>'+
       '<div class="bar-bg"><div class="bar-fill" style="width:'+(t.score/maxEff*100)+'%;background:#4ade80"></div></div></div>';
   }).join('');
-  document.getElementById('efficiencyList').innerHTML = ehtml;
-  document.getElementById('dEfficiencyList').innerHTML = ehtml;
+  var eel = document.getElementById('efficiencyList');
+  if (eel) eel.innerHTML = ehtml;
+  var deel = document.getElementById('dEfficiencyList');
+  if (deel) deel.innerHTML = ehtml;
 }
 
 function showTeamHistory(nation) {
   var apps = data.worldCups.map(function(wc){
     var t = wc.teams.find(function(t2){return t2.nation===nation;});
-    return t?{year:wc.year,totalKm:t.totalKm,furthestStage:t.furthestStage,firstHostCity:t.firstHostCity}:null;
+    return t ? {year:wc.year, totalKm:t.totalKm, furthestStage:t.furthestStage, firstHostCity:t.firstHostCity} : null;
   }).filter(Boolean);
   if (!apps.length) return;
   var html = apps.sort(function(a,b){return a.year-b.year;}).map(function(a){
     return '<div class="stat-row"><span class="lbl"><b>'+a.year+'</b> · '+a.firstHostCity+'</span>'+
       '<span class="val">'+fmt(a.totalKm)+' km · '+(a.furthestStage||'—')+'</span></div>';
   }).join('');
-  document.getElementById('detailCard').style.display = 'block';
-  document.getElementById('detailName').textContent = nation+' — All Appearances';
-  document.getElementById('detailStats').innerHTML = html;
+  var dc = document.getElementById('detailCard');
+  if (dc) {
+    dc.style.display = 'block';
+    document.getElementById('detailName').textContent = nation+' — All Appearances';
+    document.getElementById('detailStats').innerHTML = html;
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1338,27 +1363,26 @@ function navigateWC(dir) {
   if (next!==idx) updateForYear(years[next]);
 }
 
-// ═══════════════════════════════════════════════════
-//  MOBILE DRAWER — TOUCH GESTURES
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  MOBILE DRAWER — TOUCH GESTURES + PEEK
+// ═══════════════════════════════════════════════════════
 
-var drawer = null;
-var drawerState = { isOpen: false, startY: 0, currentY: 0, isDragging: false };
+var drawerState = { isOpen: false, startY: 0, currentY: 0, isDragging: false, autoOpened: false };
 
 function initDrawer() {
-  var isMobile = window.innerWidth <= 640;
-  if (!isMobile) return;
+  if (!window.matchMedia('(max-width: 768px)').matches) return;
 
-  drawer = document.getElementById('bottomDrawer');
+  var drawer = document.getElementById('bottomDrawer');
+  if (!drawer) return;
   var handle = document.getElementById('drawerHandle');
   var closeBtn = document.getElementById('drawerClose');
+  if (!handle || !closeBtn) return;
 
-  closeBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    closeDrawer();
-  });
+  // Auto-open after animation settles
+  setTimeout(function(){ openDrawer(); drawerState.autoOpened = true; }, 2500);
 
-  // Touch events for drag-to-open
+  closeBtn.addEventListener('click', function(e){ e.stopPropagation(); closeDrawer(); });
+
   handle.addEventListener('touchstart', function(e) {
     drawerState.startY = e.touches[0].clientY;
     drawerState.currentY = drawerState.startY;
@@ -1370,88 +1394,48 @@ function initDrawer() {
     if (!drawerState.isDragging) return;
     drawerState.currentY = e.touches[0].clientY;
     var dy = drawerState.currentY - drawerState.startY;
+    var pullHeight = drawer ? drawer.getBoundingClientRect().height : 300;
     if (!drawerState.isOpen && dy < 0) {
-      // Pulling up — open
-      var pull = Math.min(Math.abs(dy) / 200, 1);
-      drawer.style.transform = 'translateY(calc(100% - 36px - ' + (pull * (100 - 36)) + '%))';
+      var pct = Math.min(Math.abs(dy) / 200, 1);
+      if (drawer) drawer.style.transform = 'translateY(' + ((1 - pct) * (pullHeight - 44)) + 'px)';
     } else if (drawerState.isOpen && dy > 0) {
-      // Pulling down — close
-      var push = Math.min(dy / 200, 1);
-      drawer.style.transform = 'translateY(' + (push * (100 - 36)) + '%)';
+      var pct = Math.min(dy / (pullHeight * 0.3), 1);
+      if (drawer) drawer.style.transform = 'translateY(' + (pct * (pullHeight - 44)) + 'px)';
     }
   }, { passive: true });
 
-  document.addEventListener('touchend', function(e) {
+  document.addEventListener('touchend', function() {
     if (!drawerState.isDragging) return;
     drawerState.isDragging = false;
-    drawer.classList.remove('no-transition');
-    drawer.style.transform = '';
-
+    if (drawer) drawer.classList.remove('no-transition');
     var dy = drawerState.currentY - drawerState.startY;
-    if (!drawerState.isOpen && dy < -40) {
-      openDrawer();
-    } else if (drawerState.isOpen && dy > 40) {
-      closeDrawer();
-    }
+    if (!drawerState.isOpen && dy < -30) { openDrawer(); }
+    else if (drawerState.isOpen && dy > 30) { closeDrawer(); }
+    else if (drawer) drawer.style.transform = '';
   }, { passive: true });
 
-  // Tap the drawer peek to open
-  drawer.addEventListener('click', function(e) {
-    if (drawerState.isOpen) return;
-    // Only open if clicking the handle area
-    var rect = drawer.getBoundingClientRect();
-    var handleHeight = 36;
-    if (e.clientY - rect.top < handleHeight + 30) {
-      openDrawer();
-    }
+  // Tap handle to toggle
+  handle.addEventListener('click', function() {
+    if (drawerState.isOpen) closeDrawer(); else openDrawer();
   });
 
-  // Keyboard: Escape closes drawer
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && drawerState.isOpen) closeDrawer();
   });
 }
 
 function openDrawer() {
+  var drawer = document.getElementById('bottomDrawer');
   if (!drawer) return;
   drawer.classList.add('open');
   drawerState.isOpen = true;
 }
 
 function closeDrawer() {
+  var drawer = document.getElementById('bottomDrawer');
   if (!drawer) return;
   drawer.classList.remove('open');
   drawerState.isOpen = false;
-}
-
-// ═══════════════════════════════════════════════════
-//  SIDEBAR OVERLAY (desktop)
-// ═══════════════════════════════════════════════════
-
-function initSidebar() {
-  if (window.innerWidth <= 640) return;
-
-  var overlay = document.getElementById('sidebarOverlay');
-  var toggle = document.getElementById('sidebarToggle');
-  var close = document.getElementById('sidebarClose');
-
-  toggle.addEventListener('click', function() {
-    var isOpen = overlay.classList.toggle('open');
-    toggle.classList.toggle('active', isOpen);
-  });
-
-  close.addEventListener('click', function() {
-    overlay.classList.remove('open');
-    toggle.classList.remove('active');
-  });
-
-  // Keyboard: Escape closes sidebar
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && overlay.classList.contains('open')) {
-      overlay.classList.remove('open');
-      toggle.classList.remove('active');
-    }
-  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -1461,31 +1445,34 @@ function initSidebar() {
 function initTabs() {
   document.querySelectorAll('.tab').forEach(function(tab){
     tab.addEventListener('click', function(){
-      var parent = this.closest('.sidebar-overlay, .bottom-drawer');
+      var parent = this.closest('.sidebar, .bottom-drawer');
       if (!parent) return;
       parent.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-      parent.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
       this.classList.add('active');
-      document.getElementById('panel-'+this.dataset.panel).classList.add('active');
+      // Figure out which panels to show
+      var panelPrefix = this.dataset.panel;
+      parent.querySelectorAll('.panel, .drawer-panel').forEach(function(p){
+        if (p.id === 'panel-'+panelPrefix) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
     });
   });
 }
 
 // ═══════════════════════════════════════════════════
-//  MAP PAN REACTIVATION
+//  MAP INTERACTION
 // ═══════════════════════════════════════════════════
 
 function initMapInteraction() {
-  // Re-draw arcs when map stops moving (world view)
+  if (!map) return;
   map.on('moveend', function() {
-    if (currentView === 'world' && !isDrawing) {
-      startArcAnimation();
-    }
+    if (currentView === 'world' && !isDrawing) startArcAnimation();
   });
   map.on('zoomend', function() {
-    if (currentView === 'world' && !isDrawing) {
-      startArcAnimation();
-    }
+    if (currentView === 'world' && !isDrawing) startArcAnimation();
   });
 }
 
@@ -1497,51 +1484,38 @@ function init() {
   fetch(DATA_URL).then(function(r){return r.json();}).then(function(d){
     data = d;
 
-    // Map — CartoDB dark matter tiles, full viewport
-    map = L.map('map', {
-      center: [15, 0], zoom: 2,
-      zoomControl: false,
-      attributionControl: false,
-      worldCopyJump: false,
-      scrollWheelZoom: true,
-      touchZoom: true,
-      doubleClickZoom: true,
-      dragging: true,
-      keyboard: false,
-    });
+    try {
+      map = L.map('map', {
+        center: [15, 0], zoom: 2,
+        zoomControl: false,
+        attributionControl: false,
+        scrollWheelZoom: true,
+        touchZoom: true,
+        doubleClickZoom: true,
+        dragging: true,
+        keyboard: false,
+      });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 8, minZoom: 2,
+      }).addTo(map);
+      map.setMaxBounds([[-85, -180], [85, 180]]);
+    } catch(e) {
+      // Map failed — still show data
+    }
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 8, minZoom: 2,
-    }).addTo(map);
-
-    // Limit world view — never zoom too close
-    map.setMaxBounds([[85, -180], [-85, 180]]);
-
-    // Canvas
     initCanvas();
-
-    // Build UI
     buildTimeline();
     initTabs();
     buildAllTime();
     updateForYear(1930);
-
-    // Map interaction
     initMapInteraction();
-
-    // Sidebar & Drawer
-    initSidebar();
     initDrawer();
 
-    // Event listeners
-    document.getElementById('prevYear').addEventListener('click', function(e){
-      e.stopPropagation();
-      navigateWC(-1);
-    });
-    document.getElementById('nextYear').addEventListener('click', function(e){
-      e.stopPropagation();
-      navigateWC(1);
-    });
+    // Event listeners (with null checks)
+    var prevBtn = document.getElementById('prevYear');
+    if (prevBtn) prevBtn.addEventListener('click', function(){navigateWC(-1);});
+    var nextBtn = document.getElementById('nextYear');
+    if (nextBtn) nextBtn.addEventListener('click', function(){navigateWC(1);});
     document.addEventListener('keydown', function(e){
       if (e.key === 'ArrowLeft') navigateWC(-1);
       if (e.key === 'ArrowRight') navigateWC(1);
@@ -1566,34 +1540,37 @@ function init() {
       });
     });
 
-    // Filter
-    document.getElementById('filterKnockout').addEventListener('click', function(){
-      filterQF = !filterQF;
-      this.classList.toggle('active', filterQF);
-      var wc = data.worldCups.find(function(c){return c.year===currentYear;});
-      if (wc){
-        renderTeamList(wc);
-        renderDrawerTeamList(wc);
-        if (currentView === 'world') startArcAnimation();
-      }
-    });
+    // QF+ filter
+    var filterBtn = document.getElementById('filterKnockout');
+    if (filterBtn) {
+      filterBtn.addEventListener('click', function(){
+        filterQF = !filterQF;
+        this.classList.toggle('active', filterQF);
+        var wc = data.worldCups.find(function(c){return c.year===currentYear;});
+        if (wc) {
+          renderTeamList(wc);
+          renderDrawerTeamList(wc);
+          if (currentView === 'world') startArcAnimation();
+        }
+      });
+    }
 
-    // Detail close
-    document.querySelectorAll('.detail-card').forEach(function(card){
-      // Detail cards auto-update via onclick
-    });
-
-    // Hide loading, show app
-    document.getElementById('loading').classList.add('hidden');
-    document.getElementById('app').style.display = '';
+    // Show app
+    var loading = document.getElementById('loading');
+    if (loading) loading.classList.add('hidden');
+    var app = document.getElementById('app');
+    if (app) app.style.display = '';
   }).catch(function(e){
-    document.getElementById('loading').innerHTML = '<div style="color:#f87171;font-family:var(--font-mono);font-size:12px;text-align:center;padding:20px;">❌ Failed to load data<br><span style="font-size:10px;color:var(--text-dim);">'+e.message+'</span></div>';
+    var loading = document.getElementById('loading');
+    if (loading) {
+      loading.innerHTML = '<div style="color:#f87171;font-family:var(--font-mono);font-size:12px;text-align:center;padding:20px;">❌ Failed to load data<br><span style="font-size:10px;color:var(--text-dim);">'+e.message+'</span></div>';
+    }
   });
 }
 
 document.addEventListener('DOMContentLoaded', init);
 
-// Touch prevention for Leaflet hover-tap issues
+// Prevent double-tap zoom on map
 document.addEventListener('touchstart', function(){}, {passive: true});
 </script>
 </body>
