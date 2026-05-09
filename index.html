@@ -349,7 +349,7 @@ function initTabs(){document.querySelectorAll('.tab').forEach(function(tab){tab.
 function initSearch(){['searchInput','dSearchInput'].forEach(function(id){var inp=document.getElementById(id);if(!inp)return;inp.addEventListener('input',function(){searchQuery=this.value.trim();if(!data)return;var wc=data.worldCups.find(function(c){return c.year===currentYear});if(wc){renderTeamList(wc);renderDrawerTeamList(wc);drawArcs()}})})}
 
 // ── DRAWER ──
-function initDrawer(){if(!window.matchMedia('(max-width:768px)').matches)return;var drawer=document.getElementById('bottomDrawer');if(!drawer)return;var handle=document.getElementById('drawerHandle'),closeBtn=document.getElementById('drawerClose');if(!handle||!closeBtn)return;setTimeout(function(){closeBtn.addEventListener('click',function(e){e.stopPropagation();closeDrawer()});handle.addEventListener('touchstart',function(e){drawerState.startY=e.touches[0].clientY;drawerState.currentY=drawerState.startY;drawerState.isDragging=true;drawer.classList.add('no-transition')},{passive:true});document.addEventListener('touchmove',function(e){if(!drawerState.isDragging)return;drawerState.currentY=e.touches[0].clientY;var dy=drawerState.currentY-drawerState.startY,bh=drawer.getBoundingClientRect().height;if(!drawerState.isOpen&&dy<0){var pct=Math.min(Math.abs(dy)/200,1);drawer.style.transform='translateY('+((1-pct)*(bh-44))+'px)'}else if(drawerState.isOpen&&dy>0){var pct2=Math.min(dy/(bh*0.3),1);drawer.style.transform='translateY('+(pct2*(bh-44))+'px)'}},{passive:true});document.addEventListener('touchend',function(){if(!drawerState.isDragging)return;drawerState.isDragging=false;if(drawer)drawer.classList.remove('no-transition');var dy=drawerState.currentY-drawerState.startY;if(!drawerState.isOpen&&dy<-30)openDrawer();else if(drawerState.isOpen&&dy>30)closeDrawer();else if(drawer)drawer.style.transform=''},{passive:true});handle.addEventListener('click',function(){if(drawerState.isOpen)closeDrawer();else openDrawer()})}
+function initDrawer(){if(!window.matchMedia('(max-width:768px)').matches)return;var drawer=document.getElementById('bottomDrawer');if(!drawer)return;var handle=document.getElementById('drawerHandle'),closeBtn=document.getElementById('drawerClose');if(!handle||!closeBtn)return;closeBtn.addEventListener('click',function(e){e.stopPropagation();closeDrawer()});handle.addEventListener('touchstart',function(e){drawerState.startY=e.touches[0].clientY;drawerState.currentY=drawerState.startY;drawerState.isDragging=true;drawer.classList.add('no-transition')},{passive:true});document.addEventListener('touchmove',function(e){if(!drawerState.isDragging)return;drawerState.currentY=e.touches[0].clientY;var dy=drawerState.currentY-drawerState.startY,bh=drawer.getBoundingClientRect().height;if(!drawerState.isOpen&&dy<0){var pct=Math.min(Math.abs(dy)/200,1);drawer.style.transform='translateY('+((1-pct)*(bh-44))+'px)'}else if(drawerState.isOpen&&dy>0){var pct2=Math.min(dy/(bh*0.3),1);drawer.style.transform='translateY('+(pct2*(bh-44))+'px)'}},{passive:true});document.addEventListener('touchend',function(){if(!drawerState.isDragging)return;drawerState.isDragging=false;if(drawer)drawer.classList.remove('no-transition');var dy=drawerState.currentY-drawerState.startY;if(!drawerState.isOpen&&dy<-30)openDrawer();else if(drawerState.isOpen&&dy>30)closeDrawer();else if(drawer)drawer.style.transform=''},{passive:true});handle.addEventListener('click',function(){if(drawerState.isOpen)closeDrawer();else openDrawer()})
 function openDrawer(){var d=document.getElementById('bottomDrawer');if(!d)return;d.classList.add('open');drawerState.isOpen=true}
 function closeDrawer(){var d=document.getElementById('bottomDrawer');if(!d)return;d.classList.remove('open');drawerState.isOpen=false}
 
@@ -357,9 +357,48 @@ function closeDrawer(){var d=document.getElementById('bottomDrawer');if(!d)retur
 function parseDeepLinks(){var p=new URLSearchParams(location.search),year=parseInt(p.get('year')),team=p.get('team');if(data&&year){var valid=data.worldCups.some(function(wc){return wc.year===year});if(valid)currentYear=year}if(team)selectedTeam=team}
 
 // ── INIT ──
-function init(){loadData().then(function(d){data=d;try{map=L.map('map',{center:[15,0],zoom:2,zoomControl:false,attributionControl:false,scrollWheelZoom:true,touchZoom:true,doubleClickZoom:true,dragging:true,keyboard:false});L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:8,minZoom:2}).addTo(map);map.setMaxBounds([[-85,-180],[85,180]])}catch(e){}initCanvas();parseDeepLinks();buildTimeline();initTabs();buildAllTime();updateForYear(currentYear);initSearch();initDrawer();map.on('moveend',function(){if(currentView==='world'&&!isDrawing)drawArcs()});map.on('zoomend',function(){if(currentView==='world'&&!isDrawing)drawArcs()});['prevYear','nextYear'].forEach(function(id){var b=document.getElementById(id);if(b)b.addEventListener('click',function(){navigateWC(id==='prevYear'?-1:1)})});document.addEventListener('keydown',function(e){if(e.key==='ArrowLeft')navigateWC(-1);if(e.key==='ArrowRight')navigateWC(1)});document.querySelectorAll('.view-btn').forEach(function(b){b.addEventListener('click',function(){currentView=this.dataset.view;document.querySelectorAll('.view-btn').forEach(function(v){v.classList.remove('active')});this.classList.add('active');var wc=data.worldCups.find(function(c){return c.year===currentYear});if(!wc)return;if(currentView==='world'){if(markerLayer){map.removeLayer(markerLayer);markerLayer=null}map.setView([15,0],2,{animate:true});drawArcs()}else{stopArcAnim();renderHostView(wc)}})});var fb=document.getElementById('filterKnockout');if(fb)fb.addEventListener('click',function(){filterQF=!filterQF;this.classList.toggle('active',filterQF);var wc=data.worldCups.find(function(c){return c.year===currentYear});if(wc){renderTeamList(wc);renderDrawerTeamList(wc);drawArcs()}});var hp=location.search&&location.search.length>1;if(hp)dismissSplash();window.dispatchEvent(new Event('resize'));var lt=document.getElementById('loadingText');if(lt)lt.textContent='Ready ✈️';var fl=document.getElementById('loadingFill');if(fl)fl.style.width='100%'}).catch(function(e){var lt=document.getElementById('loadingText');if(lt)lt.textContent='❌ Failed to load';var sp=document.getElementById('splash');if(sp)sp.innerHTML+='<div style="color:#f87171;font-size:11px;margin-top:12px;">'+e.message+'</div><button class="splash-btn" onclick="location.reload()" style="margin-top:16px;">RETRY</button>'})}
+function init(){
+loadData().then(function(d){
+data=d;
+try{
+map=L.map('map',{center:[15,0],zoom:2,zoomControl:false,attributionControl:false,scrollWheelZoom:true,touchZoom:true,doubleClickZoom:true,dragging:true,keyboard:false});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:8,minZoom:2}).addTo(map);
+map.setMaxBounds([[-85,-180],[85,180]]);
+}catch(e){}
+initCanvas();
+parseDeepLinks();
+updateForYear(currentYear);
+var lt=document.getElementById('loadingText');
+if(lt)lt.textContent='Ready ✈️';
+var fl=document.getElementById('loadingFill');
+if(fl)fl.style.width='100%';
+var btn=document.getElementById('startBtn');
+if(btn&&!(location.search&&location.search.length>1)){
+btn.addEventListener('click',dismissSplash);
+btn.addEventListener('touchend',function(ev){ev.preventDefault();dismissSplash();});
+}
+var hp=location.search&&location.search.length>1;
+if(hp)dismissSplash();
+setTimeout(function(){
+buildTimeline();initTabs();buildAllTime();initSearch();initDrawer();
+map.on('moveend',function(){if(currentView==='world'&&!isDrawing)drawArcs();});
+map.on('zoomend',function(){if(currentView==='world'&&!isDrawing)drawArcs();});
+['prevYear','nextYear'].forEach(function(id){var b=document.getElementById(id);if(b)b.addEventListener('click',function(){navigateWC(id==='prevYear'?-1:1);});});
+document.addEventListener('keydown',function(e){if(e.key==='ArrowLeft')navigateWC(-1);if(e.key==='ArrowRight')navigateWC(1);});
+document.querySelectorAll('.view-btn').forEach(function(b){b.addEventListener('click',function(){currentView=this.dataset.view;document.querySelectorAll('.view-btn').forEach(function(v){v.classList.remove('active');});this.classList.add('active');var wc=data.worldCups.find(function(c){return c.year===currentYear;});if(!wc)return;if(currentView==='world'){if(markerLayer){map.removeLayer(markerLayer);markerLayer=null;}map.setView([15,0],2,{animate:true});drawArcs();}else{stopArcAnim();renderHostView(wc);}});});
+var fb=document.getElementById('filterKnockout');
+if(fb)fb.addEventListener('click',function(){filterQF=!filterQF;this.classList.toggle('active',filterQF);var wc=data.worldCups.find(function(c){return c.year===currentYear;});if(wc){renderTeamList(wc);renderDrawerTeamList(wc);drawArcs();}});
+window.dispatchEvent(new Event('resize'));
+},100);
+}).catch(function(e){
+var lt=document.getElementById('loadingText');
+if(lt)lt.textContent='❌ Failed to load';
+var sp=document.getElementById('splash');
+if(sp)sp.innerHTML+='<div style="color:#f87171;font-size:11px;margin-top:12px;">'+e.message+'</div><button class="splash-btn" onclick="location.reload()" style="margin-top:16px;">RETRY</button>';
+});
+}
 
-document.addEventListener('DOMContentLoaded',function(){var btn=document.getElementById('startBtn');if(btn&&!(location.search&&location.search.length>1))btn.addEventListener('click',dismissSplash);init()});
+document.addEventListener('DOMContentLoaded',function(){init();});
 </script>
 </body>
 </html>
